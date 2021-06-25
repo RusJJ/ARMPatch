@@ -41,11 +41,6 @@ extern "C"
 								((((dest - addr - 4) >> 1) & 0x7FF | 0xB800) << 16);
 			write(addr, (uintptr_t)&newDest, 4);
 		}
-		void hook(void* addr, void* func, void** original)
-		{
-			unprotect((uintptr_t)addr);
-			MSHookFunction(addr, func, original);
-		}
 		void hook(uintptr_t addr, void* func, void** original)
 		{
 			unprotect(addr);

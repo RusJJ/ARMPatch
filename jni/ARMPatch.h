@@ -51,6 +51,5 @@ extern "C" namespace ARMPatch
 		func - Call that function instead of an original
 		original - Original function!
 	*/
-	void hook(void* addr, void* func, void** original);
 	void hook(uintptr_t addr, void* func, void** original);
 }
