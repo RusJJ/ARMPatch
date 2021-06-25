@@ -1,7 +1,14 @@
 #include <unistd.h>
 #include <dlfcn.h>
 
-extern "C" namespace ARMPatch
+#define DECLFN(_name, _ret, ...)			\
+		_ret (*orgnl_##_name)(__VA_ARGS__);	\
+		_ret hooked_##_name(__VA_ARGS__)
+#define USEFN(_name)	\
+		&hooked_##_name, &orgnl_##_name
+#define CALLFN(_name, ...) orgnl_##_name(__VA_ARGS__)
+
+namespace ARMPatch
 {
 	/*
 		Get library's address
@@ -52,10 +59,15 @@ extern "C" namespace ARMPatch
 	void JMP(uintptr_t addr, uintptr_t dest);
 	
 	/*
-		Cydia's Substrate
+		Cydia's Substrate (use hook instead of hookInternal, ofc reprotects it!)
 		addr - what to hook?
 		func - Call that function instead of an original
 		original - Original function!
 	*/
-	void hook(uintptr_t addr, void* func, void** original);
+	void hookInternal(void* addr, void* func, void** original);
+	template<class A, class B, class C>
+	void hook(A addr, B func, C original)
+	{
+		hookInternal((void*)addr, (void*)func, (void**)original);
+	}
 }
