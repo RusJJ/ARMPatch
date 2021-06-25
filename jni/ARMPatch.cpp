@@ -10,6 +10,10 @@ extern "C"
 		{
 			return (uintptr_t)dlopen(soLib, RTLD_LAZY);
 		}
+		uintptr_t getSym(uintptr_t handle, const char* sym)
+		{
+			return (uintptr_t)dlsym((void*)handle, sym);
+		}
 		int unprotect(uintptr_t addr)
 		{
 			return mprotect((void*)(addr & 0xFFFFF000), PAGE_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC);
@@ -28,7 +32,7 @@ extern "C"
 		void NOP(uintptr_t addr, size_t count)
 		{
 			unprotect(addr);
-			for(uintptr_t p = addr; p != (addr + count*2); p += 2)
+			for (uintptr_t p = addr; p != (addr + count*2); p += 2)
 			{
 				(*(char*)p) = 0x00;
 				(*(char*)(p + 1)) = 0x46;
@@ -43,6 +47,7 @@ extern "C"
 		}
 		void hook(uintptr_t addr, void* func, void** original)
 		{
+			if (addr == NULL) return;
 			unprotect(addr);
 			MSHookFunction((void*)addr, func, original);
 		}

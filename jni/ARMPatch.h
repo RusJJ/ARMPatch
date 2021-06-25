@@ -8,6 +8,12 @@ extern "C" namespace ARMPatch
 		soLib - name of a loaded library
 	*/
 	uintptr_t getLib(const char* soLib);
+	/*
+		Get library's function address by symbol (__unwind???)
+		handle - handle of a library (getLib for example)
+		sym - name of a function
+	*/
+	uintptr_t getSym(uintptr_t handle, const char* sym);
 	
 	/*
 		Reprotect memory to allow reading/writing/executing
