@@ -59,6 +59,12 @@ namespace ARMPatch
 	void JMP(uintptr_t addr, uintptr_t dest);
 	
 	/*
+		Place RET instruction (RETURN, function end, reprotects it)
+		addr - where to put
+	*/
+	void RET(uintptr_t addr);
+	
+	/*
 		Cydia's Substrate (use hook instead of hookInternal, ofc reprotects it!)
 		addr - what to hook?
 		func - Call that function instead of an original
@@ -69,5 +75,18 @@ namespace ARMPatch
 	void hook(A addr, B func, C original)
 	{
 		hookInternal((void*)addr, (void*)func, (void**)original);
+	}
+	
+	/*
+		A simple hook of a PLT-section functions (use hookPLT instead of hookPLTInternal, ofc reprotects it!)
+		addr - what to hook?
+		func - Call that function instead of an original
+		original - Original function!
+	*/
+	void hookPLTInternal(void* addr, void* func, void** original);
+	template<class A, class B, class C>
+	void hookPLT(A addr, B func, C original)
+	{
+		hookPLTInternal((void*)addr, (void*)func, (void**)original);
 	}
 }

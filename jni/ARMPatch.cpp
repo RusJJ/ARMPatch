@@ -43,10 +43,21 @@ namespace ARMPatch
 							((((dest - addr - 4) >> 1) & 0x7FF | 0xB800) << 16);
 		write(addr, (uintptr_t)&newDest, 4);
 	}
+	void RET(uintptr_t addr)
+	{
+		write(addr, (uintptr_t)"\xF7\x46", 2);
+	}
 	void hookInternal(void* addr, void* func, void** original)
 	{
 		if (addr == NULL) return;
 		unprotect((uintptr_t)addr);
 		MSHookFunction(addr, func, original);
+	}
+	void hookPLTInternal(void* addr, void* func, void** original)
+	{
+		if (addr == NULL || func == NULL || original == NULL) return;
+		unprotect((uintptr_t)addr);
+		*original = addr;
+		addr = func;
 	}
 }
