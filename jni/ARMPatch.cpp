@@ -1,7 +1,16 @@
 #include "ARMPatch.h"
+#include <cstring>
 #include <sys/mman.h>
 
-extern "C" void MSHookFunction(void* symbol, void* replace, void** result);
+#ifdef __arm__
+	extern "C" void MSHookFunction(void* symbol, void* replace, void** result);
+#elif defined __aarch64__
+	extern "C" void A64HookFunction(void *const symbol, void *const replace, void **result);
+	#define cacheflush(c, n, zeroarg) __builtin___clear_cache((void*)c, (void*)n)
+#else
+	#error This lib is supposed to work on ARMv7 (ARMv7a) and ARMv8 only!
+#endif
+
 namespace ARMPatch
 {
 	uintptr_t getLib(const char* soLib)
@@ -51,7 +60,11 @@ namespace ARMPatch
 	{
 		if (addr == NULL) return;
 		unprotect((uintptr_t)addr);
-		MSHookFunction(addr, func, original);
+		#ifdef __arm__
+			MSHookFunction(addr, func, original);
+		#elif defined __aarch64__
+			A64HookFunction(addr, func, original);
+		#endif
 	}
 	void hookPLTInternal(void* addr, void* func, void** original)
 	{
