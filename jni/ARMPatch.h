@@ -70,9 +70,9 @@ namespace ARMPatch
 		func - Call that function instead of an original
 		original - Original function!
 	*/
-	void hookInternal(void* addr, void* func, void** original);
+	void hookInternal(void* addr, void* func, void** original = NULL);
 	template<class A, class B, class C>
-	void hook(A addr, B func, C original)
+	void hook(A addr, B func, C original = NULL)
 	{
 		hookInternal((void*)addr, (void*)func, (void**)original);
 	}
@@ -83,9 +83,9 @@ namespace ARMPatch
 		func - Call that function instead of an original
 		original - Original function!
 	*/
-	void hookPLTInternal(void* addr, void* func, void** original);
+	void hookPLTInternal(void* addr, void* func, void** original = NULL);
 	template<class A, class B, class C>
-	void hookPLT(A addr, B func, C original)
+	void hookPLT(A addr, B func, C original = NULL)
 	{
 		hookPLTInternal((void*)addr, (void*)func, (void**)original);
 	}

@@ -39,8 +39,8 @@ namespace ARMPatch
 	}
 	void JMP(uintptr_t addr, uintptr_t dest)
 	{
-		uint32_t newDest= 	((dest - addr - 4) >> 12) & 0x7FF | 0xF000 |
-							((((dest - addr - 4) >> 1) & 0x7FF | 0xB800) << 16);
+		uint32_t newDest = ((dest - addr - 4) >> 12) & 0x7FF | 0xF000 |
+		                   ((((dest - addr - 4) >> 1) & 0x7FF | 0xB800) << 16);
 		write(addr, (uintptr_t)&newDest, 4);
 	}
 	void RET(uintptr_t addr)
@@ -55,9 +55,9 @@ namespace ARMPatch
 	}
 	void hookPLTInternal(void* addr, void* func, void** original)
 	{
-		if (addr == NULL || func == NULL || original == NULL) return;
+		if (addr == NULL || func == NULL) return;
 		unprotect((uintptr_t)addr);
-		*original = addr;
+		if(original != NULL) *original = addr;
 		addr = func;
 	}
 }
