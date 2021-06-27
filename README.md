@@ -8,7 +8,8 @@ void hooked()
 	orig(); // Call original function (thanks Cydia!)
 }
 
-// DECLFN(fn name, returen type, args)
+// DECLFN(fn name, return type, args)
+// CApplication* self because that function is a non-static class method
 DECLFN(ApplicationStart, void, CApplication* self)
 {
 	__android_log_print(ANDROID_LOG_INFO, "HOOKED!", "Application::Start");
