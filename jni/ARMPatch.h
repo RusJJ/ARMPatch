@@ -1,5 +1,7 @@
 #include <unistd.h>
+#include <vector>
 #include <dlfcn.h>
+#include <sys/mman.h>
 
 #define DECLFN(_name, _ret, ...)			\
 		_ret (*orgnl_##_name)(__VA_ARGS__);	\
@@ -8,13 +10,28 @@
 		&hooked_##_name, &orgnl_##_name
 #define CALLFN(_name, ...) orgnl_##_name(__VA_ARGS__)
 
+struct bytePattern
+{
+	struct byteEntry
+	{
+		uint8_t nValue;
+		bool bUnknown;
+	};
+	std::vector<byteEntry> vBytes;
+};
+
 namespace ARMPatch
 {
 	/*
-		Get library's address
+		Get library's start address
 		soLib - name of a loaded library
 	*/
 	uintptr_t getLib(const char* soLib);
+	/*
+		Get library's end address
+		soLib - name of a loaded library
+	*/
+	uintptr_t getLibLength(const char* soLib);
 	/*
 		Get library's function address by symbol (__unwind???)
 		handle - handle of a library (getLib for example)
@@ -26,7 +43,7 @@ namespace ARMPatch
 		Reprotect memory to allow reading/writing/executing
 		addr - address
 	*/
-	int unprotect(uintptr_t addr);
+	int unprotect(uintptr_t addr, size_t len = PAGE_SIZE);
 	
 	/*
 		Write to memory (reprotects it)
@@ -65,16 +82,28 @@ namespace ARMPatch
 	void RET(uintptr_t addr);
 	
 	/*
+		ByteScanner
+		pattern - pattern.
+		soLib - library's name
+	*/
+	uintptr_t getAddressFromPattern(const char* pattern, const char* soLib)
+	
+	/*
 		Cydia's Substrate (use hook instead of hookInternal, ofc reprotects it!)
 		addr - what to hook?
 		func - Call that function instead of an original
 		original - Original function!
 	*/
-	void hookInternal(void* addr, void* func, void** original = NULL);
+	void hookInternal(void* addr, void* func, void** original);
 	template<class A, class B, class C>
-	void hook(A addr, B func, C original = NULL)
+	void hook(A addr, B func, C original)
 	{
 		hookInternal((void*)addr, (void*)func, (void**)original);
+	}
+	template<class A, class B>
+	void hook(A addr, B func)
+	{
+		hookInternal((void*)addr, (void*)func, (void**)NULL);
 	}
 	
 	/*
@@ -83,10 +112,15 @@ namespace ARMPatch
 		func - Call that function instead of an original
 		original - Original function!
 	*/
-	void hookPLTInternal(void* addr, void* func, void** original = NULL);
+	void hookPLTInternal(void* addr, void* func, void** original);
 	template<class A, class B, class C>
-	void hookPLT(A addr, B func, C original = NULL)
+	void hookPLT(A addr, B func, C original)
 	{
 		hookPLTInternal((void*)addr, (void*)func, (void**)original);
+	}
+	template<class A, class B>
+	void hookPLT(A addr, B func)
+	{
+		hookPLTInternal((void*)addr, (void*)func, (void**)NULL);
 	}
 }

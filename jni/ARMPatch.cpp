@@ -1,6 +1,7 @@
 #include "ARMPatch.h"
 #include <cstring>
-#include <sys/mman.h>
+#include <cstdio>
+#include <cstdlib>
 
 #ifdef __arm__
 	extern "C" void MSHookFunction(void* symbol, void* replace, void** result);
@@ -15,15 +16,62 @@ namespace ARMPatch
 {
 	uintptr_t getLib(const char* soLib)
 	{
-		return (uintptr_t)dlopen(soLib, RTLD_LAZY);
+		char filename[0xFF] = {0},
+		buffer[2048] = {0};
+		FILE *fp = 0;
+		uintptr_t address = 0;
+
+		//sprintf( filename, "/proc/%d/maps", getpid() );
+		//fp = fopen( filename, "rt" );
+		fp = fopen( "/proc/self/maps", "rt" );
+		if (fp == 0) goto done;
+			
+		while (fgets(buffer, sizeof(buffer), fp))
+		{
+			if ( strstr( buffer, soLib ) )
+			{
+				address = (uintptr_t)strtoul( buffer, 0, 16 );
+				break;
+			}
+		}
+
+		done:
+		if (fp) fclose(fp);
+
+		return address;
+	}
+	uintptr_t getLibLength(const char* soLib)
+	{
+		char filename[0xFF] = {0},
+		buffer[2048] = {0};
+		FILE *fp = 0;
+		uintptr_t address = 0;
+
+		fp = fopen( "/proc/self/maps", "rt" );
+		if (fp == 0) goto done;
+		
+		while (fgets(buffer, sizeof(buffer), fp))
+		{
+			if ( strstr( buffer, soLib ) )
+			{
+				address = (uintptr_t)strtoul( buffer, 0, 16 );
+				address = (uintptr_t)strtoul( &buffer[9], 0, 16 ) - address;
+				break;
+			}
+		}
+
+		done:
+		if (fp) fclose(fp);
+
+		return address;
 	}
 	uintptr_t getSym(uintptr_t handle, const char* sym)
 	{
 		return (uintptr_t)dlsym((void*)handle, sym);
 	}
-	int unprotect(uintptr_t addr)
+	int unprotect(uintptr_t addr, size_t len)
 	{
-		return mprotect((void*)(addr & 0xFFFFF000), PAGE_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC);
+		return mprotect((void*)(addr & 0xFFFFF000), len, PROT_READ | PROT_WRITE | PROT_EXEC);
 	}
 	void write(uintptr_t dest, uintptr_t src, size_t size)
 	{
@@ -70,7 +118,58 @@ namespace ARMPatch
 	{
 		if (addr == NULL || func == NULL) return;
 		unprotect((uintptr_t)addr);
-		if(original != NULL) *original = addr;
-		addr = func;
+		if(original != NULL)
+			*((uintptr_t*)original) = *(uintptr_t*)addr;
+		*(uintptr_t*)addr = (uintptr_t)func;
+	}
+	
+	bool compareData(const uint8_t* data, const bytePattern::byteEntry* pattern, size_t patternlength)
+	{
+		int index = 0;
+		for (size_t i = 0; i < patternlength; i++)
+		{
+			auto byte = *pattern;
+			if (!byte.bUnknown && *data != byte.nValue) return false;
+
+			++data;
+			++pattern;
+			++index;
+		}
+		return index == patternlength;
+	}
+	uintptr_t getAddressFromPattern(const char* pattern, const char* soLib)
+	{
+		bytePattern ret;
+		const char* input = &pattern[0];
+		while (*input)
+		{
+			bytePattern::byteEntry entry;
+			if (std::isspace(*input)) ++input;
+			if (std::isxdigit(*input))
+			{
+				entry.bUnknown = false;
+				entry.nValue = (uint8_t)std::strtol(input, nullptr, 16);
+				input += 2;
+			}
+			else
+			{
+				entry.bUnknown = true;
+				input += 2;
+			}
+			ret.vBytes.emplace_back(entry);
+		}
+		
+		auto patternstart = ret.vBytes.data();
+		auto length = ret.vBytes.size();
+
+		uintptr_t pMemoryBase = getLib(soLib);
+		size_t nMemorySize = getLibLength(soLib) - length;
+
+		for (size_t i = 0; i < nMemorySize; i++)
+		{
+			uintptr_t addr = pMemoryBase + i;
+			if (compareData((const uint8_t*)addr, patternstart, length)) return addr;
+		}
+		return nullptr;
 	}
 }
