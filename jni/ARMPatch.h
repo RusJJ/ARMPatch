@@ -86,7 +86,7 @@ namespace ARMPatch
 		pattern - pattern.
 		soLib - library's name
 	*/
-	uintptr_t getAddressFromPattern(const char* pattern, const char* soLib)
+	uintptr_t getAddressFromPattern(const char* pattern, const char* soLib);
 	
 	/*
 		Cydia's Substrate (use hook instead of hookInternal, ofc reprotects it!)

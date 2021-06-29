@@ -2,6 +2,7 @@
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
+#include <ctype.h>
 
 #ifdef __arm__
 	extern "C" void MSHookFunction(void* symbol, void* replace, void** result);
@@ -12,6 +13,7 @@
 	#error This lib is supposed to work on ARMv7 (ARMv7a) and ARMv8 only!
 #endif
 
+using namespace std;
 namespace ARMPatch
 {
 	uintptr_t getLib(const char* soLib)
@@ -144,8 +146,8 @@ namespace ARMPatch
 		while (*input)
 		{
 			bytePattern::byteEntry entry;
-			if (std::isspace(*input)) ++input;
-			if (std::isxdigit(*input))
+			if (isspace(*input)) ++input;
+			if (isxdigit(*input))
 			{
 				entry.bUnknown = false;
 				entry.nValue = (uint8_t)std::strtol(input, nullptr, 16);
@@ -170,6 +172,6 @@ namespace ARMPatch
 			uintptr_t addr = pMemoryBase + i;
 			if (compareData((const uint8_t*)addr, patternstart, length)) return addr;
 		}
-		return nullptr;
+		return (uintptr_t)0;
 	}
 }
