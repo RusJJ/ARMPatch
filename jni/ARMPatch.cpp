@@ -8,7 +8,7 @@
 	extern "C" void MSHookFunction(void* symbol, void* replace, void** result);
 #elif defined __aarch64__
 	extern "C" void A64HookFunction(void *const symbol, void *const replace, void **result);
-	#define cacheflush(c, n, zeroarg) __builtin___clear_cache((void*)c, (void*)n)
+	#define cacheflush(c, n, zeroarg) __builtin___clear_cache((char*)(c), (char*)(n))
 #else
 	#error This lib is supposed to work on ARMv7 (ARMv7a) and ARMv8 only!
 #endif
