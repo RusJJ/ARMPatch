@@ -10,7 +10,7 @@
 	extern "C" void A64HookFunction(void *const symbol, void *const replace, void **result);
 	#define cacheflush(c, n, zeroarg) __builtin___clear_cache((char*)(c), (char*)(n))
 #else
-	#error This lib is supposed to work on ARMv7 (ARMv7a) and ARMv8 only!
+	#error This lib is supposed to work on ARMv7 and ARMv8 only!
 #endif
 
 using namespace std;
@@ -23,8 +23,6 @@ namespace ARMPatch
 		FILE *fp = 0;
 		uintptr_t address = 0;
 
-		//sprintf( filename, "/proc/%d/maps", getpid() );
-		//fp = fopen( filename, "rt" );
 		fp = fopen( "/proc/self/maps", "rt" );
 		if (fp == 0) goto done;
 			
