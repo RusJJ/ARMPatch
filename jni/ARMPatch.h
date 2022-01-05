@@ -9,6 +9,7 @@
 #define USEFN(_name)	\
 		&hooked_##_name, &orgnl_##_name
 #define CALLFN(_name, ...) orgnl_##_name(__VA_ARGS__)
+#define CLEAR_BIT0(addr) (addr & 0xFFFFFFFE)
 
 struct bytePattern
 {
@@ -89,21 +90,21 @@ namespace ARMPatch
 	uintptr_t getAddressFromPattern(const char* pattern, const char* soLib);
 	
 	/*
-		Cydia's Substrate (use hook instead of hookInternal, ofc reprotects it!)
+		Cydia's Substrate / Rprop's Inline Hook (use hook instead of hookInternal, ofc reprotects it!)
 		addr - what to hook?
 		func - Call that function instead of an original
 		original - Original function!
 	*/
-	void hookInternal(void* addr, void* func, void** original);
+	bool hookInternal(void* addr, void* func, void** original);
 	template<class A, class B, class C>
-	void hook(A addr, B func, C original)
+	bool hook(A addr, B func, C original)
 	{
-		hookInternal((void*)addr, (void*)func, (void**)original);
+		return hookInternal((void*)addr, (void*)func, (void**)original);
 	}
 	template<class A, class B>
-	void hook(A addr, B func)
+	bool hook(A addr, B func)
 	{
-		hookInternal((void*)addr, (void*)func, (void**)NULL);
+		return hookInternal((void*)addr, (void*)func, (void**)NULL);
 	}
 	
 	/*
