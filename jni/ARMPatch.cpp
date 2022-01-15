@@ -68,7 +68,7 @@ namespace ARMPatch
 	uintptr_t getSym(uintptr_t libAddr, const char* sym)
 	{
 		Dl_info info;
-		if(dladdr((void*)libAddr, &info) == NULL) return 0;
+		if(dladdr((void*)libAddr, &info) == 0) return 0;
 		return (uintptr_t)dlsym(info.dli_fbase, sym);
 	}
 	int unprotect(uintptr_t addr, size_t len)
