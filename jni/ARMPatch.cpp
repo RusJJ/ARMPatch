@@ -61,9 +61,9 @@ namespace ARMPatch
 		}
 		return address;
 	}
-	uintptr_t getSym(uintptr_t handle, const char* sym)
+	uintptr_t getSym(void* handle, const char* sym)
 	{
-		return (uintptr_t)dlsym((void*)handle, sym);
+		return (uintptr_t)dlsym(handle, sym);
 	}
 	int unprotect(uintptr_t addr, size_t len)
 	{
