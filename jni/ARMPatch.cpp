@@ -103,6 +103,31 @@ namespace ARMPatch
 	{
 		write(addr, (uintptr_t)"\xF7\x46", 2);
 	}
+	void Redirect(uintptr_t addr, uintptr_t to) // Was taken from TheOfficialFloW's git repo
+	{
+		if(!addr) return;
+		if(addr & 1)
+		{
+			addr &= ~1;
+			if (addr & 2)
+			{
+				uint16_t nop = 0xBF00;
+				write(addr, (uintptr_t)nop, sizeof(nop));
+				addr += 2;
+			}
+			uint32_t hook[2];
+			hook[0] = 0xF000F8DF;
+			hook[1] = to;
+			write(addr, (uintptr_t)hook, sizeof(hook));
+		}
+		else
+		{
+			uint32_t hook[2];
+			hook[0] = 0xE51FF004; // LDR PC, [PC, #-0x4]
+			hook[1] = to;
+			write(addr, (uintptr_t)hook, sizeof(hook));
+		}
+	}
 	bool hookInternal(void* addr, void* func, void** original)
 	{
 		if (addr == NULL || func == NULL) return false;

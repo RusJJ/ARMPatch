@@ -99,6 +99,14 @@ namespace ARMPatch
 	void RET(uintptr_t addr);
 	
 	/*
+		Place LDR instruction (moves directly to the function with the same stack!)
+		Very fast and very lightweight!
+		addr - where to redirect
+		to - redirect to what?
+	*/
+	void Redirect(uintptr_t addr, uintptr_t to);
+	
+	/*
 		ByteScanner
 		pattern - pattern.
 		soLib - library's name
