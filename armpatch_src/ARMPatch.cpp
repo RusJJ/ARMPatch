@@ -15,6 +15,17 @@ namespace ARMPatch
         return 0;
     }
     
+    const char* GetPatchVer()
+    {
+        #define STRSTRSECPASS(_AA) #_AA
+        #define STRSTRMACRO(_AA) STRSTRSECPASS(_AA)
+        #ifdef __32BIT
+        return "ARMPatch v." STRSTRMACRO(ARMPATCH_VER) " (32-bit) (compiled " __DATE__ " " __TIME__ ")";
+        #elif defined __64BIT
+        return "ARMPatch v." STRSTRMACRO(ARMPATCH_VER) " (64-bit) (compiled " __DATE__ " " __TIME__ ")";
+        #endif
+    }
+    int GetPatchVerInt() { return ARMPATCH_VER; }
     uintptr_t GetLib(const char* soLib)
     {
         FILE *fp = NULL;
@@ -75,13 +86,17 @@ namespace ARMPatch
     }
     int Unprotect(uintptr_t addr, size_t len)
     {
-        return mprotect((void*)(addr & 0xFFFFF000), len, PROT_READ | PROT_WRITE | PROT_EXEC);
+        #ifdef __32BIT
+        return mprotect((void*)(addr), len, PROT_READ | PROT_WRITE | PROT_EXEC);
+        #elif defined _64BIT
+        return mprotect((void*)(addr & ~(0x3UL)), len, PROT_READ | PROT_WRITE | PROT_EXEC);
+        #endif
     }
     void Write(uintptr_t dest, uintptr_t src, size_t size)
     {
         Unprotect(dest, size);
         memcpy((void*)dest, (void*)src, size);
-        cacheflush(CLEAR_BIT0(dest), CLEAR_BIT0(dest) + size, 0);
+        cacheflush(dest, dest + size, 0);
     }
     void Read(uintptr_t src, uintptr_t dest, size_t size)
     {
@@ -97,7 +112,7 @@ namespace ARMPatch
                 (*(char*)(p + 0)) = 0x00;
                 (*(char*)(p + 1)) = 0xBF;
             }
-            cacheflush(CLEAR_BIT0(addr), CLEAR_BIT0(addr) + count * 2, 0);
+            cacheflush(addr, addr + count * 2, 0);
         #elif defined __64BIT
             Unprotect(addr, count * 4);
             for (uintptr_t p = addr; p != (addr + count * 4); p += 4)
@@ -256,5 +271,10 @@ namespace ARMPatch
             if (CompareData((const uint8_t*)addr, patternstart, length)) return addr;
         }
         return (uintptr_t)0;
+    }
+    void WriteMOV(uintptr_t addr, ARMRegister from, ARMRegister to)
+    {
+        uint32_t newDest = (0x01 << 24) | (to << 16) | (from << 12);
+        Write(addr, (uintptr_t)&newDest, sizeof(uintptr_t));
     }
 }

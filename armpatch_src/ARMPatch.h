@@ -6,12 +6,10 @@
 #ifdef __arm__
     #define __32BIT
     extern "C" bool MSHookFunction(void* symbol, void* replace, void** result);
-	#define CLEAR_BIT0(addr) (addr & 0xFFFFFFFE)
 #elif defined __aarch64__
     #define __64BIT
     extern "C" bool A64HookFunction(void *const symbol, void *const replace, void **result);
     #define cacheflush(c, n, zeroarg) __builtin___clear_cache((char*)(c), (char*)(n))
-	#define CLEAR_BIT0(addr) (addr & 0xFFFFFFFFFFFFFFFE)
 #else
     #error This lib is supposed to work on ARM only!
 #endif
@@ -26,11 +24,43 @@
     void HookOf_##_name(__VA_ARGS__)
 /* Just a hook of a function */
 #define HOOK(_name, _fnAddr)                                    \
-    ARMPatch::hook((void*)(_fnAddr), (void*)(&HookOf_##_name), (void**)(&_name));
+    ARMPatch::Hook((void*)(_fnAddr), (void*)(&HookOf_##_name), (void**)(&_name));
 /* Just a hook of a function located in PLT section (by address!) */
 #define HOOKPLT(_name, _fnAddr)                                 \
-    ARMPatch::hookPLT((void*)(_fnAddr), (void*)(&HookOf_##_name), (void**)(&_name));
-/* Clear a bit of an address! */
+    ARMPatch::HookPLT((void*)(_fnAddr), (void*)(&HookOf_##_name), (void**)(&_name));
+
+#define ARMPATCH_VER 1
+    
+#ifdef __32BIT
+enum ARMRegister : char
+{
+    ARM_REG_R0 = 0,
+    ARM_REG_R1,
+    ARM_REG_R2,
+    ARM_REG_R3,
+    ARM_REG_R4,
+    ARM_REG_R5,
+    ARM_REG_R6,
+    ARM_REG_R7,
+    ARM_REG_R8,
+    ARM_REG_R9,
+    ARM_REG_R10,
+    ARM_REG_R11,
+    ARM_REG_R12,
+    ARM_REG_SP,
+    ARM_REG_LR,
+    ARM_REG_PC,
+    
+    ARM_REG_INVALID
+};
+#elif defined __64BIT
+enum ARMRegister : char
+{
+    
+    
+    ARM_REG_INVALID
+};
+#endif
 
 struct bytePattern
 {
@@ -44,6 +74,8 @@ struct bytePattern
 
 namespace ARMPatch
 {
+    const char* GetPatchVer();
+    int GetPatchVerInt();
     /*
         Get library's start address
         soLib - name of a loaded library
@@ -166,7 +198,7 @@ namespace ARMPatch
     }
     
     /*
-        A simple hook of a PLT-section functions (use hookPLT instead of hookPLTInternal, ofc reprotects it!)
+        A simple hook of a PLT-section functions (use HookPLT instead of hookPLTInternal, ofc reprotects it!)
         addr - what to hook?
         func - Call that function instead of an original
         original - Original function!
