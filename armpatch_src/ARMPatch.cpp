@@ -131,7 +131,8 @@ namespace ARMPatch
     void RET(uintptr_t addr)
     {
         #ifdef __arm__
-            write(addr, (uintptr_t)"\x1E\xFF\x2F\xE1", 4);
+            write(addr, (uintptr_t)"\x70\x47", 2);
+            //write(addr, (uintptr_t)"\x1E\xFF\x2F\xE1", 4);
         #elif defined __aarch64__
             write(addr, (uintptr_t)"\xC0\x03\x5F\xD6", 4);
         #endif
