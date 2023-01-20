@@ -15,7 +15,7 @@ namespace ARMPatch
         return 0;
     }
     
-    uintptr_t getLib(const char* soLib)
+    uintptr_t GetLib(const char* soLib)
     {
         FILE *fp = NULL;
         uintptr_t address = 0;
@@ -36,7 +36,7 @@ namespace ARMPatch
         }
         return address;
     }
-    uintptr_t getLibLength(const char* soLib)
+    uintptr_t GetLibLength(const char* soLib)
     {
         FILE *fp = NULL;
         uintptr_t address = 0, end_address = 0;
@@ -58,11 +58,11 @@ namespace ARMPatch
         }
         return end_address - address;
     }
-    uintptr_t getSym(void* handle, const char* sym)
+    uintptr_t GetSym(void* handle, const char* sym)
     {
         return (uintptr_t)dlsym(handle, sym);
     }
-    uintptr_t getSym(uintptr_t libAddr, const char* sym)
+    uintptr_t GetSym(uintptr_t libAddr, const char* sym)
     {
         /*Dl_info info;
         if(dladdr((void*)libAddr, &info) == 0) return 0;
@@ -73,33 +73,33 @@ namespace ARMPatch
         void* handle = dlopen(__iter_dlName, RTLD_LAZY);
         return (uintptr_t)dlsym(handle, sym);
     }
-    int unprotect(uintptr_t addr, size_t len)
+    int Unprotect(uintptr_t addr, size_t len)
     {
         return mprotect((void*)(addr & 0xFFFFF000), len, PROT_READ | PROT_WRITE | PROT_EXEC);
     }
-    void write(uintptr_t dest, uintptr_t src, size_t size)
+    void Write(uintptr_t dest, uintptr_t src, size_t size)
     {
-        unprotect(dest, size);
+        Unprotect(dest, size);
         memcpy((void*)dest, (void*)src, size);
         cacheflush(CLEAR_BIT0(dest), CLEAR_BIT0(dest) + size, 0);
     }
-    void read(uintptr_t src, uintptr_t dest, size_t size)
+    void Read(uintptr_t src, uintptr_t dest, size_t size)
     {
-        unprotect(src, size); // Do we need it..?
+        Unprotect(src, size); // Do we need it..?
         memcpy((void*)src, (void*)dest, size);
     }
-    void NOP(uintptr_t addr, size_t count)
+    void WriteNOP(uintptr_t addr, size_t count)
     {
-        #ifdef __arm__
-            unprotect(addr, count * 2);
+        #ifdef __32BIT
+            Unprotect(addr, count * 2);
             for (uintptr_t p = addr; p != (addr + count * 2); p += 2)
             {
                 (*(char*)(p + 0)) = 0x00;
                 (*(char*)(p + 1)) = 0xBF;
             }
             cacheflush(CLEAR_BIT0(addr), CLEAR_BIT0(addr) + count * 2, 0);
-        #elif defined __aarch64__
-            unprotect(addr, count * 4);
+        #elif defined __64BIT
+            Unprotect(addr, count * 4);
             for (uintptr_t p = addr; p != (addr + count * 4); p += 4)
             {
                 (*(char*)(p + 0)) = 0x1F;
@@ -110,36 +110,36 @@ namespace ARMPatch
             cacheflush(CLEAR_BIT0(addr), CLEAR_BIT0(addr) + count * 4, 0);
         #endif
     }
-    void B(uintptr_t addr, uintptr_t dest) // B instruction
+    void WriteB(uintptr_t addr, uintptr_t dest) // B instruction
     {
         uint32_t newDest = ((dest - addr - 4) >> 12) & 0x7FF | 0xF000 |
                            ((((dest - addr - 4) >> 1) & 0x7FF | 0xB800) << 16);
-        write(addr, (uintptr_t)&newDest, sizeof(uintptr_t));
+        Write(addr, (uintptr_t)&newDest, sizeof(uintptr_t));
     }
-    void BL(uintptr_t addr, uintptr_t dest) // BL instruction
+    void WriteBL(uintptr_t addr, uintptr_t dest) // BL instruction
     {
         uint32_t newDest = ((dest - addr - 4) >> 12) & 0x7FF | 0xF000 |
                            ((((dest - addr - 4) >> 1) & 0x7FF | 0xF800) << 16);
-        write(addr, (uintptr_t)&newDest, sizeof(uintptr_t));
+        Write(addr, (uintptr_t)&newDest, sizeof(uintptr_t));
     }
-    void BLX(uintptr_t addr, uintptr_t dest) // BLX instruction
+    void WriteBLX(uintptr_t addr, uintptr_t dest) // BLX instruction
     {
         uint32_t newDest = ((dest - addr - 4) >> 12) & 0x7FF | 0xF000 |
                            ((((dest - addr - 4) >> 1) & 0x7FF | 0xE800) << 16);
-        write(addr, (uintptr_t)&newDest, sizeof(uintptr_t));
+        Write(addr, (uintptr_t)&newDest, sizeof(uintptr_t));
     }
-    void RET(uintptr_t addr)
+    void WriteRET(uintptr_t addr)
     {
-        #ifdef __arm__
-            write(addr, (uintptr_t)"\x70\x47", 2);
-            //write(addr, (uintptr_t)"\x1E\xFF\x2F\xE1", 4);
-        #elif defined __aarch64__
-            write(addr, (uintptr_t)"\xC0\x03\x5F\xD6", 4);
+        #ifdef __32BIT
+            Write(addr, (uintptr_t)"\x70\x47", 2);
+            //Write(addr, (uintptr_t)"\x1E\xFF\x2F\xE1", 4);
+        #elif defined __64BIT
+            Write(addr, (uintptr_t)"\xC0\x03\x5F\xD6", 4);
         #endif
     }
-    void redirect(uintptr_t addr, uintptr_t to) // Was taken from TheOfficialFloW's git repo, should not work on ARM64 rn
+    void Redirect(uintptr_t addr, uintptr_t to) // Was taken from TheOfficialFloW's git repo, should not work on ARM64 rn
     {
-    #ifdef __arm__
+    #ifdef __32BIT
         if(!addr) return;
         uint32_t hook[2] = {0xE51FF004, to};
         if(addr & 1)
@@ -147,35 +147,35 @@ namespace ARMPatch
             addr &= ~1;
             if (addr & 2)
             {
-                NOP(addr, 1); 
+                WriteNOP(addr, 1); 
                 addr += 2;
             }
             hook[0] = 0xF000F8DF;
         }
-        write(addr, (uintptr_t)hook, sizeof(hook));
-    #elif defined __aarch64__
+        Write(addr, (uintptr_t)hook, sizeof(hook));
+    #elif defined __64BIT
         // TODO:
     #endif
     }
     bool hookInternal(void* addr, void* func, void** original)
     {
         if (addr == NULL || func == NULL || addr == func) return false;
-        unprotect((uintptr_t)addr);
-        #ifdef __arm__
+        Unprotect((uintptr_t)addr);
+        #ifdef __32BIT
             return MSHookFunction(addr, func, original);
-        #elif defined __aarch64__
+        #elif defined __64BIT
             return A64HookFunction(addr, func, original);
         #endif
     }
     void hookPLTInternal(void* addr, void* func, void** original)
     {
         if (addr == NULL || func == NULL || addr == func) return;
-        unprotect((uintptr_t)addr);
+        Unprotect((uintptr_t)addr);
         if(original != NULL) *((uintptr_t*)original) = *(uintptr_t*)addr;
         *(uintptr_t*)addr = (uintptr_t)func;
     }
     
-    bool compareData(const uint8_t* data, const bytePattern::byteEntry* pattern, size_t patternlength)
+    static bool CompareData(const uint8_t* data, const bytePattern::byteEntry* pattern, size_t patternlength)
     {
         int index = 0;
         for (size_t i = 0; i < patternlength; i++)
@@ -189,7 +189,7 @@ namespace ARMPatch
         }
         return index == patternlength;
     }
-    uintptr_t getAddressFromPattern(const char* pattern, const char* soLib)
+    uintptr_t GetAddressFromPattern(const char* pattern, const char* soLib)
     {
         bytePattern ret;
         const char* input = &pattern[0];
@@ -214,17 +214,17 @@ namespace ARMPatch
         auto patternstart = ret.vBytes.data();
         auto length = ret.vBytes.size();
 
-        uintptr_t pMemoryBase = getLib(soLib);
-        size_t nMemorySize = getLibLength(soLib) - length;
+        uintptr_t pMemoryBase = GetLib(soLib);
+        size_t nMemorySize = GetLibLength(soLib) - length;
 
         for (size_t i = 0; i < nMemorySize; i++)
         {
             uintptr_t addr = pMemoryBase + i;
-            if (compareData((const uint8_t*)addr, patternstart, length)) return addr;
+            if (CompareData((const uint8_t*)addr, patternstart, length)) return addr;
         }
         return (uintptr_t)0;
     }
-    uintptr_t getAddressFromPattern(const char* pattern, uintptr_t libStart, uintptr_t scanLen)
+    uintptr_t GetAddressFromPattern(const char* pattern, uintptr_t libStart, uintptr_t scanLen)
     {
         bytePattern ret;
         const char* input = &pattern[0];
@@ -253,7 +253,7 @@ namespace ARMPatch
         for (size_t i = 0; i < scanSize; i++)
         {
             uintptr_t addr = libStart + i;
-            if (compareData((const uint8_t*)addr, patternstart, length)) return addr;
+            if (CompareData((const uint8_t*)addr, patternstart, length)) return addr;
         }
         return (uintptr_t)0;
     }

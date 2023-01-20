@@ -4,9 +4,11 @@
 #include <sys/mman.h>
 
 #ifdef __arm__
+    #define __32BIT
     extern "C" bool MSHookFunction(void* symbol, void* replace, void** result);
 	#define CLEAR_BIT0(addr) (addr & 0xFFFFFFFE)
 #elif defined __aarch64__
+    #define __64BIT
     extern "C" bool A64HookFunction(void *const symbol, void *const replace, void **result);
     #define cacheflush(c, n, zeroarg) __builtin___clear_cache((char*)(c), (char*)(n))
 	#define CLEAR_BIT0(addr) (addr & 0xFFFFFFFFFFFFFFFE)
@@ -46,31 +48,31 @@ namespace ARMPatch
         Get library's start address
         soLib - name of a loaded library
     */
-    uintptr_t getLib(const char* soLib);
+    uintptr_t GetLib(const char* soLib);
     /*
         Get library's end address
         soLib - name of a loaded library
     */
-    uintptr_t getLibLength(const char* soLib);
+    uintptr_t GetLibLength(const char* soLib);
     /*
         Get library's function address by symbol (__unwind???)
         handle - HANDLE (NOTICE THIS!!!) of a library (u can obtain it using dlopen)
         sym - name of a function
     */
-    uintptr_t getSym(void* handle, const char* sym);
+    uintptr_t GetSym(void* handle, const char* sym);
     /*
         Get library's function address by symbol (__unwind???)
         libAddr - ADDRESS (NOTICE THIS!!!) of a library (u can obtain it using getLib)
         sym - name of a function
         @XMDS requested this
     */
-    uintptr_t getSym(uintptr_t libAddr, const char* sym);
+    uintptr_t GetSym(uintptr_t libAddr, const char* sym);
     
     /*
         Reprotect memory to allow reading/writing/executing
         addr - address
     */
-    int unprotect(uintptr_t addr, size_t len = PAGE_SIZE);
+    int Unprotect(uintptr_t addr, size_t len = PAGE_SIZE);
     
     /*
         Write to memory (reprotects it)
@@ -78,7 +80,7 @@ namespace ARMPatch
         src - address of an info to write
         size - size of an info
     */
-    void write(uintptr_t dest, uintptr_t src, size_t size);
+    void Write(uintptr_t dest, uintptr_t src, size_t size);
     
     /*
         Read memory (reprotects it)
@@ -86,41 +88,41 @@ namespace ARMPatch
         dest - where to write a readed info?
         size - size of an info
     */
-    void read(uintptr_t src, uintptr_t dest, size_t size);
+    void Read(uintptr_t src, uintptr_t dest, size_t size);
     
     /*
         Place NotOPerator instruction (reprotects it)
         addr - where to put
         count - how much times to put
     */
-    void NOP(uintptr_t addr, size_t count = 1);
+    void WriteNOP(uintptr_t addr, size_t count = 1);
     
     /*
         Place JUMP instruction (reprotects it)
         addr - where to put
         dest - Jump to what?
     */
-    void B(uintptr_t addr, uintptr_t dest);
+    void WriteB(uintptr_t addr, uintptr_t dest);
     
     /*
         Place BL instruction (reprotects it)
         addr - where to put
         dest - Jump to what?
     */
-    void BL(uintptr_t addr, uintptr_t dest);
+    void WriteBL(uintptr_t addr, uintptr_t dest);
     
     /*
         Place BLX instruction (reprotects it)
         addr - where to put
         dest - Jump to what?
     */
-    void BLX(uintptr_t addr, uintptr_t dest);
+    void WriteBLX(uintptr_t addr, uintptr_t dest);
     
     /*
         Place RET instruction (RETURN, function end, reprotects it)
         addr - where to put
     */
-    void RET(uintptr_t addr);
+    void WriteRET(uintptr_t addr);
     
     /*
         Place LDR instruction (moves directly to the function with the same stack!)
@@ -128,14 +130,14 @@ namespace ARMPatch
         addr - where to redirect
         to - redirect to what?
     */
-    void redirect(uintptr_t addr, uintptr_t to);
+    void Redirect(uintptr_t addr, uintptr_t to);
     
     /*
         ByteScanner
         pattern - pattern.
         soLib - library's name
     */
-    uintptr_t getAddressFromPattern(const char* pattern, const char* soLib);
+    uintptr_t GetAddressFromPattern(const char* pattern, const char* soLib);
     
     /*
         ByteScanner
@@ -143,7 +145,7 @@ namespace ARMPatch
         libStart - library's start address
         scanLen - how much to scan from libStart
     */
-    uintptr_t getAddressFromPattern(const char* pattern, uintptr_t libStart, uintptr_t scanLen);
+    uintptr_t GetAddressFromPattern(const char* pattern, uintptr_t libStart, uintptr_t scanLen);
     
     /*
         Cydia's Substrate / Rprop's Inline Hook (use hook instead of hookInternal, ofc reprotects it!)
@@ -153,12 +155,12 @@ namespace ARMPatch
     */
     bool hookInternal(void* addr, void* func, void** original);
     template<class A, class B, class C>
-    bool hook(A addr, B func, C original)
+    bool Hook(A addr, B func, C original)
     {
         return hookInternal((void*)addr, (void*)func, (void**)original);
     }
     template<class A, class B>
-    bool hook(A addr, B func)
+    bool Hook(A addr, B func)
     {
         return hookInternal((void*)addr, (void*)func, (void**)NULL);
     }
@@ -171,12 +173,12 @@ namespace ARMPatch
     */
     void hookPLTInternal(void* addr, void* func, void** original);
     template<class A, class B, class C>
-    void hookPLT(A addr, B func, C original)
+    void HookPLT(A addr, B func, C original)
     {
         hookPLTInternal((void*)addr, (void*)func, (void**)original);
     }
     template<class A, class B>
-    void hookPLT(A addr, B func)
+    void HookPLT(A addr, B func)
     {
         hookPLTInternal((void*)addr, (void*)func, (void**)NULL);
     }
