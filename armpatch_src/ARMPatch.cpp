@@ -1,9 +1,20 @@
 #include "ARMPatch.h"
 #include <ctype.h>
+#include <link.h>
 
-using namespace std;
 namespace ARMPatch
 {
+    static const char* __iter_dlName;
+    static int __iter_callback(struct dl_phdr_info *info, size_t size, void *data)
+    {
+        if ((void *)info->dlpi_addr == data)
+        {
+            __iter_dlName = info->dlpi_name;
+            return 1;
+        }
+        return 0;
+    }
+    
     uintptr_t getLib(const char* soLib)
     {
         FILE *fp = NULL;
@@ -53,9 +64,14 @@ namespace ARMPatch
     }
     uintptr_t getSym(uintptr_t libAddr, const char* sym)
     {
-        Dl_info info;
+        /*Dl_info info;
         if(dladdr((void*)libAddr, &info) == 0) return 0;
-        return (uintptr_t)dlsym(info.dli_fbase, sym);
+        return (uintptr_t)dlsym(info.dli_fbase, sym);*/
+        
+        __iter_dlName = NULL;
+        dl_iterate_phdr(__iter_callback, (void*)libAddr);
+        void* handle = dlopen(__iter_dlName, RTLD_LAZY);
+        return (uintptr_t)dlsym(handle, sym);
     }
     int unprotect(uintptr_t addr, size_t len)
     {
@@ -63,24 +79,36 @@ namespace ARMPatch
     }
     void write(uintptr_t dest, uintptr_t src, size_t size)
     {
-        unprotect(dest);
+        unprotect(dest, size);
         memcpy((void*)dest, (void*)src, size);
         cacheflush(CLEAR_BIT0(dest), CLEAR_BIT0(dest) + size, 0);
     }
     void read(uintptr_t src, uintptr_t dest, size_t size)
     {
-        unprotect(src);
+        unprotect(src, size); // Do we need it..?
         memcpy((void*)src, (void*)dest, size);
     }
     void NOP(uintptr_t addr, size_t count)
     {
-        unprotect(addr);
-        for (uintptr_t p = addr; p != (addr + count*2); p += 2)
-        {
-            (*(char*)(p + 0)) = 0x00;
-            (*(char*)(p + 1)) = 0xBF;
-        }
-        cacheflush(CLEAR_BIT0(addr), CLEAR_BIT0(addr) + count * 2, 0);
+        #ifdef __arm__
+            unprotect(addr, count * 2);
+            for (uintptr_t p = addr; p != (addr + count * 2); p += 2)
+            {
+                (*(char*)(p + 0)) = 0x00;
+                (*(char*)(p + 1)) = 0xBF;
+            }
+            cacheflush(CLEAR_BIT0(addr), CLEAR_BIT0(addr) + count * 2, 0);
+        #elif defined __aarch64__
+            unprotect(addr, count * 4);
+            for (uintptr_t p = addr; p != (addr + count * 4); p += 4)
+            {
+                (*(char*)(p + 0)) = 0x1F;
+                (*(char*)(p + 1)) = 0x20;
+                (*(char*)(p + 2)) = 0x03;
+                (*(char*)(p + 3)) = 0xD5;
+            }
+            cacheflush(CLEAR_BIT0(addr), CLEAR_BIT0(addr) + count * 4, 0);
+        #endif
     }
     void B(uintptr_t addr, uintptr_t dest) // B instruction
     {
@@ -102,7 +130,11 @@ namespace ARMPatch
     }
     void RET(uintptr_t addr)
     {
-        write(addr, (uintptr_t)"\xF7\x46", 2);
+        #ifdef __arm__
+            write(addr, (uintptr_t)"\x1E\xFF\x2F\xE1", 4);
+        #elif defined __aarch64__
+            write(addr, (uintptr_t)"\xC0\x03\x5F\xD6", 4);
+        #endif
     }
     void redirect(uintptr_t addr, uintptr_t to) // Was taken from TheOfficialFloW's git repo, should not work on ARM64 rn
     {
