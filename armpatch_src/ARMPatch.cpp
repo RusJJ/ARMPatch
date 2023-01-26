@@ -122,7 +122,7 @@ namespace ARMPatch
                 (*(char*)(p + 2)) = 0x03;
                 (*(char*)(p + 3)) = 0xD5;
             }
-            cacheflush(CLEAR_BIT0(addr), CLEAR_BIT0(addr) + count * 4, 0);
+            cacheflush(addr, addr + count * 4, 0);
         #endif
     }
     void WriteB(uintptr_t addr, uintptr_t dest) // B instruction
