@@ -87,7 +87,7 @@ namespace ARMPatch
     int Unprotect(uintptr_t addr, size_t len)
     {
         #ifdef __32BIT
-        return mprotect((void*)(addr), len, PROT_READ | PROT_WRITE | PROT_EXEC);
+        return mprotect((void*)(addr & 0xFFFFF000), len, PROT_READ | PROT_WRITE | PROT_EXEC);
         #elif defined _64BIT
         return mprotect((void*)(addr & ~(0x3UL)), len, PROT_READ | PROT_WRITE | PROT_EXEC);
         #endif
@@ -175,7 +175,7 @@ namespace ARMPatch
     bool hookInternal(void* addr, void* func, void** original)
     {
         if (addr == NULL || func == NULL || addr == func) return false;
-        Unprotect((uintptr_t)addr);
+        //Unprotect((uintptr_t)addr, 10);
         #ifdef __32BIT
             return MSHookFunction(addr, func, original);
         #elif defined __64BIT
@@ -185,7 +185,7 @@ namespace ARMPatch
     void hookPLTInternal(void* addr, void* func, void** original)
     {
         if (addr == NULL || func == NULL || addr == func) return;
-        Unprotect((uintptr_t)addr);
+        Unprotect((uintptr_t)addr, 8);
         if(original != NULL) *((uintptr_t*)original) = *(uintptr_t*)addr;
         *(uintptr_t*)addr = (uintptr_t)func;
     }
