@@ -3,6 +3,10 @@
 #include <dlfcn.h>
 #include <sys/mman.h>
 
+#ifdef __XDL
+    #include "xdl.h"
+#endif
+
 #ifdef __arm__
     #define __32BIT
     extern "C" bool MSHookFunction(void* symbol, void* replace, void** result);
@@ -82,6 +86,16 @@ namespace ARMPatch
     */
     uintptr_t GetLib(const char* soLib);
     /*
+        Get library's handle
+        soLib - name of a loaded library
+    */
+    void* GetLibHandle(const char* soLib);
+    /*
+        Get library's handle
+        addr - an address of anything inside a library
+    */
+    void* GetLibHandle(uintptr_t addr);
+    /*
         Get library's end address
         soLib - name of a loaded library
     */
@@ -134,7 +148,7 @@ namespace ARMPatch
         addr - where to put
         dest - Jump to what?
     */
-    void WriteB(uintptr_t addr, uintptr_t dest);
+    int WriteB(uintptr_t addr, uintptr_t dest);
     
     /*
         Place BL instruction (reprotects it)

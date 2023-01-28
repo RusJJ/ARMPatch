@@ -2,6 +2,27 @@
 #include <ctype.h>
 #include <link.h>
 
+#ifdef __XDL
+void* xdl_cached[100] {0}; // Much more enough
+int cache_c = 0;
+#endif
+
+inline bool xdl_is_cached(void* ptr)
+{
+    for(int i = 0; i < cache_c; ++i)
+        if(xdl_cached[i] == ptr) return true;
+    return false;
+}
+inline void* xdl_cache(void* ptr)
+{
+    if(!xdl_is_cached(ptr))
+    {
+        xdl_cached[cache_c] = ptr;
+        ++cache_c;
+    }
+    return ptr;
+}
+
 namespace ARMPatch
 {
     static const char* __iter_dlName;
@@ -19,6 +40,7 @@ namespace ARMPatch
     {
         #define STRSTRSECPASS(_AA) #_AA
         #define STRSTRMACRO(_AA) STRSTRSECPASS(_AA)
+        
         #ifdef __32BIT
         return "ARMPatch v." STRSTRMACRO(ARMPATCH_VER) " (32-bit) (compiled " __DATE__ " " __TIME__ ")";
         #elif defined __64BIT
@@ -36,7 +58,7 @@ namespace ARMPatch
         if (fp != NULL)
         {
             while (fgets(buffer, sizeof(buffer)-1, fp))
-            {
+            {{}
                 if ( strstr( buffer, soLib ) )
                 {
                     address = (uintptr_t)strtoul( buffer, NULL, 16 );
@@ -46,6 +68,25 @@ namespace ARMPatch
             fclose(fp);
         }
         return address;
+    }
+    void* GetLibHandle(const char* soLib)
+    {
+        #ifdef __XDL
+        return xdl_cache(xdl_open(soLib, XDL_DEFAULT));
+        #else
+        return dlopen(soLib, RTLD_LAZY);
+        #endif
+    }
+    void* GetLibHandle(uintptr_t addr)
+    {
+        __iter_dlName = NULL;
+        #ifdef __XDL
+        xdl_iterate_phdr(__iter_callback, (void*)addr, XDL_DEFAULT);
+        return xdl_cache(xdl_open(__iter_dlName, XDL_DEFAULT));
+        #else
+        dl_iterate_phdr(__iter_callback, (void*)addr);
+        return dlopen(__iter_dlName, RTLD_LAZY);
+        #endif
     }
     uintptr_t GetLibLength(const char* soLib)
     {
@@ -71,6 +112,10 @@ namespace ARMPatch
     }
     uintptr_t GetSym(void* handle, const char* sym)
     {
+        #ifdef __XDL
+        if(xdl_is_cached(handle))
+            return (uintptr_t)xdl_sym(handle, sym, NULL);
+        #endif
         return (uintptr_t)dlsym(handle, sym);
     }
     uintptr_t GetSym(uintptr_t libAddr, const char* sym)
@@ -80,9 +125,15 @@ namespace ARMPatch
         return (uintptr_t)dlsym(info.dli_fbase, sym);*/
         
         __iter_dlName = NULL;
+        #ifdef __XDL
+        xdl_iterate_phdr(__iter_callback, (void*)libAddr, XDL_DEFAULT);
+        void* handle = xdl_cache(xdl_open(__iter_dlName, XDL_DEFAULT));
+        return (uintptr_t)xdl_sym(handle, sym, NULL);
+        #else
         dl_iterate_phdr(__iter_callback, (void*)libAddr);
         void* handle = dlopen(__iter_dlName, RTLD_LAZY);
         return (uintptr_t)dlsym(handle, sym);
+        #endif
     }
     int Unprotect(uintptr_t addr, size_t len)
     {
@@ -125,11 +176,52 @@ namespace ARMPatch
             cacheflush(addr, addr + count * 4, 0);
         #endif
     }
-    void WriteB(uintptr_t addr, uintptr_t dest) // B instruction
+    int WriteB(uintptr_t addr, uintptr_t dest) // B instruction
     {
-        uint32_t newDest = ((dest - addr - 4) >> 12) & 0x7FF | 0xF000 |
+        #ifdef __32BIT
+        if(addr & 0x1)
+        {
+            uintptr_t calc = (int)(0.5f * (dest - addr));
+            if(calc < 1) return 0; // B or B.W cant do that backwards :(
+            else if(calc == 1)
+            {
+                WriteNOP(addr, 1);
+                return 2;
+            }
+            
+            calc -= 2;
+            if(calc <= 255)
+            {
+                addr &= ~0x1;
+            
+                Unprotect(addr, 2);
+                (*(unsigned char*)(addr + 0)) = (unsigned char)calc;
+                (*(char*)(addr + 1)) = 0xE0;
+                cacheflush(addr, addr + 2, 0);
+                return 2;
+            }
+            else
+            {
+                addr &= ~0x1;
+            
+                Unprotect(addr, 4);
+                (*(unsigned char*)(addr + 0)) = (unsigned char)calc;
+                (*(char*)(addr + 1)) = 0xE0;
+                cacheflush(addr, addr + 4, 0);
+                
+                return 4;
+            }
+        }
+        else
+        {
+            return 0;
+        }
+        #elif defined __64BIT
+        
+        #endif
+        /*uint32_t newDest = ((dest - addr - 4) >> 12) & 0x7FF | 0xF000 |
                            ((((dest - addr - 4) >> 1) & 0x7FF | 0xB800) << 16);
-        Write(addr, (uintptr_t)&newDest, sizeof(uintptr_t));
+        Write(addr, (uintptr_t)&newDest, sizeof(uintptr_t));*/
     }
     void WriteBL(uintptr_t addr, uintptr_t dest) // BL instruction
     {
