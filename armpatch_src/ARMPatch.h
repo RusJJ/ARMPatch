@@ -175,6 +175,8 @@ namespace ARMPatch
     */
     int WriteRET(uintptr_t addr);
     
+    void WriteMOV(uintptr_t addr, ARMRegister from, ARMRegister to);
+    
     /*
         Place LDR instruction (moves directly to the function with the same stack!)
         Very fast and very lightweight!
@@ -234,5 +236,9 @@ namespace ARMPatch
         hookPLTInternal((void*)addr, (void*)func, (void**)NULL);
     }
     
-    void WriteMOV(uintptr_t addr, ARMRegister from, ARMRegister to);
+    // xDL part
+    bool IsCorrectXDLHandle(void* ptr);
+    uintptr_t GetLibXDL(void* ptr);
+    size_t GetSymSizeXDL(void* ptr);
+    const char* GetSymNameXDL(void* ptr);
 }

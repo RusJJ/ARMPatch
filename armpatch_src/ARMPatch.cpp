@@ -115,7 +115,11 @@ namespace ARMPatch
     {
         #ifdef __XDL
         if(xdl_is_cached(handle))
-            return (uintptr_t)xdl_sym(handle, sym, NULL);
+        {
+            void* ret = xdl_sym(handle, sym, NULL);
+            if(!ret) ret = xdl_dsym(handle, sym, NULL);
+            return (uintptr_t)ret;
+        }
         #endif
         return (uintptr_t)dlsym(handle, sym);
     }
@@ -259,6 +263,11 @@ namespace ARMPatch
             return 4;
         #endif
     }
+    void WriteMOV(uintptr_t addr, ARMRegister from, ARMRegister to)
+    {
+        uint32_t newDest = (0x01 << 24) | (to << 16) | (from << 12);
+        Write(addr, (uintptr_t)&newDest, sizeof(uintptr_t));
+    }
     int Redirect(uintptr_t addr, uintptr_t to) // Was taken from TheOfficialFloW's git repo, should not work on ARM64 rn
     {
     #ifdef __32BIT
@@ -387,9 +396,44 @@ namespace ARMPatch
         }
         return (uintptr_t)0;
     }
-    void WriteMOV(uintptr_t addr, ARMRegister from, ARMRegister to)
+    
+    // xDL part
+    bool IsCorrectXDLHandle(void* ptr)
     {
-        uint32_t newDest = (0x01 << 24) | (to << 16) | (from << 12);
-        Write(addr, (uintptr_t)&newDest, sizeof(uintptr_t));
+        #ifdef __XDL
+        return xdl_is_cached(ptr);
+        #endif
+        return false;
+    }
+    uintptr_t GetLibXDL(void* ptr)
+    {
+        #ifdef __XDL
+        xdl_info_t info;
+        if (xdl_info(ptr, XDL_DI_DLINFO, &info) == -1) return 0;
+        return (uintptr_t)info.dli_fbase;
+        #endif
+        return 0;
+    }
+    size_t GetSymSizeXDL(void* ptr)
+    {
+        #ifdef __XDL
+        xdl_info_t info;
+        void* cache = NULL;
+        if(!xdl_addr(ptr, &info, &cache)) return NULL;
+        xdl_addr_clean(&cache);
+        return info.dli_ssize;
+        #endif
+        return 0;
+    }
+    const char* GetSymNameXDL(void* ptr)
+    {
+        #ifdef __XDL
+        xdl_info_t info;
+        void* cache = NULL;
+        if(!xdl_addr(ptr, &info, &cache)) return NULL;
+        xdl_addr_clean(&cache);
+        return info.dli_sname;
+        #endif
+        return NULL;
     }
 }
