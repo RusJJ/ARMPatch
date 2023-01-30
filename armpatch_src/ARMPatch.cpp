@@ -125,10 +125,6 @@ namespace ARMPatch
     }
     uintptr_t GetSym(uintptr_t libAddr, const char* sym)
     {
-        /*Dl_info info;
-        if(dladdr((void*)libAddr, &info) == 0) return 0;
-        return (uintptr_t)dlsym(info.dli_fbase, sym);*/
-        
         __iter_dlName = NULL;
         #ifdef __XDL
         xdl_iterate_phdr(__iter_callback, (void*)libAddr, XDL_DEFAULT);
@@ -159,9 +155,12 @@ namespace ARMPatch
         Unprotect(src, size); // Do we need it..?
         memcpy((void*)src, (void*)dest, size);
     }
-    void WriteNOP(uintptr_t addr, size_t count)
+    int WriteNOP(uintptr_t addr, size_t count)
     {
         #ifdef __32BIT
+        if(THUMBMODE(addr))
+        {
+            addr = DETHUMB(addr);
             Unprotect(addr, count * 2);
             for (uintptr_t p = addr; p != (addr + count * 2); p += 2)
             {
@@ -169,6 +168,21 @@ namespace ARMPatch
                 (*(char*)(p + 1)) = 0xBF;
             }
             cacheflush(addr, addr + count * 2, 0);
+            return 2 * count;
+        }
+        else
+        {
+            Unprotect(addr, count * 4);
+            for (uintptr_t p = addr; p != (addr + count * 4); p += 4)
+            {
+                (*(char*)(p + 0)) = 0x00;
+                (*(char*)(p + 1)) = 0xF0;
+                (*(char*)(p + 2)) = 0x20;
+                (*(char*)(p + 3)) = 0xE3;
+            }
+            cacheflush(addr, addr + count * 4, 0);
+            return 4 * count;
+        }
         #elif defined __64BIT
             Unprotect(addr, count * 4);
             for (uintptr_t p = addr; p != (addr + count * 4); p += 4)
@@ -179,6 +193,7 @@ namespace ARMPatch
                 (*(char*)(p + 3)) = 0xD5;
             }
             cacheflush(addr, addr + count * 4, 0);
+            return 4 * count;
         #endif
     }
     int WriteB(uintptr_t addr, uintptr_t dest) // B instruction
@@ -186,7 +201,7 @@ namespace ARMPatch
         #ifdef __32BIT
         if(THUMBMODE(addr))
         {
-            uintptr_t calc = (int)(0.5f * (dest - addr));
+            intptr_t calc = (int)(0.5f * (dest - addr));
             if(calc >= -1 && calc < 1) return 0;
             else if(calc < -1)
             {
@@ -201,8 +216,7 @@ namespace ARMPatch
             calc -= 2; // PC
             if(calc <= 255)
             {
-                addr &= ~0x1;
-            
+                addr = DETHUMB(addr);
                 Unprotect(addr, 2);
                 (*(unsigned char*)(addr + 0)) = (unsigned char)calc;
                 (*(char*)(addr + 1)) = 0xE0;
@@ -213,12 +227,10 @@ namespace ARMPatch
             {
               do_b_w:
                 // B.W goes here!
-                addr &= ~0x1;
-            
                 uint32_t imm_val = (dest - addr - 4) & 0x7FFFFF;
                 uint32_t newDest = ((imm_val & 0xFFF) >> 1 | 0xB800) << 16 | (imm_val >> 12 | 0xF000);
 
-                Write(addr, (uintptr_t)&newDest, sizeof(uint32_t));
+                Write(DETHUMB(addr), (uintptr_t)&newDest, sizeof(uint32_t));
                 return 4;
             }
         }
@@ -250,7 +262,7 @@ namespace ARMPatch
         #ifdef __32BIT
         if(THUMBMODE(addr))
         {
-            Write(addr, (uintptr_t)"\x70\x47", 2);
+            Write(DETHUMB(addr), (uintptr_t)"\x70\x47", 2);
             return 2;
         }
         else
@@ -273,19 +285,19 @@ namespace ARMPatch
     #ifdef __32BIT
         if(!addr) return 0;
         uint32_t hook[2] = {0xE51FF004, to};
-        int ret = 4;
+        int ret = 8;
         if(THUMBMODE(addr))
         {
             addr &= ~0x1;
             if (addr & 0x2)
             {
-                WriteNOP(addr, 1); 
+                WriteNOP(RETHUMB(addr), 1); 
                 addr += 2;
-                ret = 6;
+                ret = 10;
             }
             hook[0] = 0xF000F8DF;
         }
-        Write(addr, (uintptr_t)hook, sizeof(hook));
+        Write(DETHUMB(addr), (uintptr_t)hook, sizeof(hook));
         return ret;
     #elif defined __64BIT
         // TODO:
@@ -414,12 +426,23 @@ namespace ARMPatch
         #endif
         return 0;
     }
+    uintptr_t GetAddrBaseXDL(uintptr_t addr)
+    {
+        #ifdef __XDL
+        xdl_info_t info;
+        void* cache = NULL;
+        if(!xdl_addr((void*)addr, &info, &cache)) return 0;
+        xdl_addr_clean(&cache);
+        return (uintptr_t)info.dli_saddr;
+        #endif
+        return 0;
+    }
     size_t GetSymSizeXDL(void* ptr)
     {
         #ifdef __XDL
         xdl_info_t info;
         void* cache = NULL;
-        if(!xdl_addr(ptr, &info, &cache)) return NULL;
+        if(!xdl_addr(ptr, &info, &cache)) return 0;
         xdl_addr_clean(&cache);
         return info.dli_ssize;
         #endif

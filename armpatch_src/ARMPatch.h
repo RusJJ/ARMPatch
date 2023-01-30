@@ -10,12 +10,15 @@
 
 #ifdef __arm__
     #define __32BIT
-    #define NOTHUMB(_a) ((uintptr_t)_a & ~0x1)
-    #define THUMBMODE(_a) (((uintptr_t)_a & 0x1)||ARMPatch::bThumbMode)
+    #define DETHUMB(_a) ((uintptr_t)_a & ~0x1)
+    #define RETHUMB(_a) ((uintptr_t)_a | 0x1)
+    #define THUMBMODE(_a) (((uintptr_t)_a & 0x1)||((uintptr_t)_a & 0x2)||ARMPatch::bThumbMode||(ARMPatch::GetAddrBaseXDL((uintptr_t)_a) & 0x1))
     extern "C" bool MSHookFunction(void* symbol, void* replace, void** result);
 #elif defined __aarch64__
     #define __64BIT
-    #define NOTHUMB(_a)
+    #define DETHUMB(_a)
+    #define RETHUMB(_a)
+    #define THUMBMODE(_a) (false)
     extern "C" bool A64HookFunction(void *const symbol, void *const replace, void **result);
     #define cacheflush(c, n, zeroarg) __builtin___clear_cache((char*)(c), (char*)(n))
 #else
@@ -146,7 +149,7 @@ namespace ARMPatch
         addr - where to put
         count - how much times to put
     */
-    void WriteNOP(uintptr_t addr, size_t count = 1);
+    int WriteNOP(uintptr_t addr, size_t count = 1);
     
     /*
         Place JUMP instruction (reprotects it)
@@ -239,6 +242,7 @@ namespace ARMPatch
     // xDL part
     bool IsCorrectXDLHandle(void* ptr);
     uintptr_t GetLibXDL(void* ptr);
+    uintptr_t GetAddrBaseXDL(uintptr_t addr);
     size_t GetSymSizeXDL(void* ptr);
     const char* GetSymNameXDL(void* ptr);
 }
