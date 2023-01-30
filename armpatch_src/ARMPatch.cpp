@@ -5,7 +5,6 @@
 #ifdef __XDL
 void* xdl_cached[100] {0}; // Much more enough
 int cache_c = 0;
-#endif
 
 inline bool xdl_is_cached(void* ptr)
 {
@@ -22,6 +21,7 @@ inline void* xdl_cache(void* ptr)
     }
     return ptr;
 }
+#endif
 
 namespace ARMPatch
 {
@@ -217,7 +217,7 @@ namespace ARMPatch
             return 0;
         }
         #elif defined __64BIT
-        
+            return 0;
         #endif
         /*uint32_t newDest = ((dest - addr - 4) >> 12) & 0x7FF | 0xF000 |
                            ((((dest - addr - 4) >> 1) & 0x7FF | 0xB800) << 16);
