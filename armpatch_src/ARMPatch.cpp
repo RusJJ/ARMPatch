@@ -274,7 +274,7 @@ namespace ARMPatch
         if(!addr) return 0;
         uint32_t hook[2] = {0xE51FF004, to};
         int ret = 4;
-        if(addr & 0x1)
+        if(THUMBMODE(addr))
         {
             addr &= ~0x1;
             if (addr & 0x2)
