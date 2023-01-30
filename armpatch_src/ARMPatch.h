@@ -3,15 +3,19 @@
 #include <dlfcn.h>
 #include <sys/mman.h>
 
+
 #ifdef __XDL
     #include "xdl.h"
 #endif
 
 #ifdef __arm__
     #define __32BIT
+    #define NOTHUMB(_a) ((uintptr_t)_a & ~0x1)
+    #define THUMBMODE(_a) (((uintptr_t)_a & 0x1)||ARMPatch::bThumbMode)
     extern "C" bool MSHookFunction(void* symbol, void* replace, void** result);
 #elif defined __aarch64__
     #define __64BIT
+    #define NOTHUMB(_a)
     extern "C" bool A64HookFunction(void *const symbol, void *const replace, void **result);
     #define cacheflush(c, n, zeroarg) __builtin___clear_cache((char*)(c), (char*)(n))
 #else
@@ -78,6 +82,7 @@ struct bytePattern
 
 namespace ARMPatch
 {
+    extern bool bThumbMode;
     const char* GetPatchVer();
     int GetPatchVerInt();
     /*
@@ -168,7 +173,7 @@ namespace ARMPatch
         Place RET instruction (RETURN, function end, reprotects it)
         addr - where to put
     */
-    void WriteRET(uintptr_t addr);
+    int WriteRET(uintptr_t addr);
     
     /*
         Place LDR instruction (moves directly to the function with the same stack!)
@@ -176,7 +181,7 @@ namespace ARMPatch
         addr - where to redirect
         to - redirect to what?
     */
-    void Redirect(uintptr_t addr, uintptr_t to);
+    int Redirect(uintptr_t addr, uintptr_t to);
     
     /*
         ByteScanner
@@ -228,4 +233,6 @@ namespace ARMPatch
     {
         hookPLTInternal((void*)addr, (void*)func, (void**)NULL);
     }
+    
+    void WriteMOV(uintptr_t addr, ARMRegister from, ARMRegister to);
 }

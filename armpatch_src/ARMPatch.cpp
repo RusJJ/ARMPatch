@@ -25,6 +25,7 @@ inline void* xdl_cache(void* ptr)
 
 namespace ARMPatch
 {
+    bool bThumbMode = false;
     static const char* __iter_dlName;
     static int __iter_callback(struct dl_phdr_info *info, size_t size, void *data)
     {
@@ -58,7 +59,7 @@ namespace ARMPatch
         if (fp != NULL)
         {
             while (fgets(buffer, sizeof(buffer)-1, fp))
-            {{}
+            {
                 if ( strstr( buffer, soLib ) )
                 {
                     address = (uintptr_t)strtoul( buffer, NULL, 16 );
@@ -179,17 +180,21 @@ namespace ARMPatch
     int WriteB(uintptr_t addr, uintptr_t dest) // B instruction
     {
         #ifdef __32BIT
-        if(addr & 0x1)
+        if(THUMBMODE(addr))
         {
             uintptr_t calc = (int)(0.5f * (dest - addr));
-            if(calc < 1) return 0; // B or B.W cant do that backwards :(
+            if(calc >= -1 && calc < 1) return 0;
+            else if(calc < -1)
+            {
+                goto do_b_w; // Only B.W supports negative offset!
+            }
             else if(calc == 1)
             {
                 WriteNOP(addr, 1);
                 return 2;
             }
             
-            calc -= 2;
+            calc -= 2; // PC
             if(calc <= 255)
             {
                 addr &= ~0x1;
@@ -202,26 +207,27 @@ namespace ARMPatch
             }
             else
             {
+              do_b_w:
+                // B.W goes here!
                 addr &= ~0x1;
             
-                Unprotect(addr, 4);
-                (*(unsigned char*)(addr + 0)) = (unsigned char)calc;
-                (*(char*)(addr + 1)) = 0xE0;
-                cacheflush(addr, addr + 4, 0);
-                
+                uint32_t imm_val = (dest - addr - 4) & 0x7FFFFF;
+                uint32_t newDest = ((imm_val & 0xFFF) >> 1 | 0xB800) << 16 | (imm_val >> 12 | 0xF000);
+
+                Write(addr, (uintptr_t)&newDest, sizeof(uint32_t));
                 return 4;
             }
         }
         else
         {
-            return 0;
+            // Probably not working!
+            uint32_t newDest = 0xEA000000 | ((dest - addr - 4) >> 2) & 0x00FFFFFF;
+            Write(addr, (uintptr_t)&newDest, sizeof(uint32_t));
+            return 4;
         }
         #elif defined __64BIT
             return 0;
         #endif
-        /*uint32_t newDest = ((dest - addr - 4) >> 12) & 0x7FF | 0xF000 |
-                           ((((dest - addr - 4) >> 1) & 0x7FF | 0xB800) << 16);
-        Write(addr, (uintptr_t)&newDest, sizeof(uintptr_t));*/
     }
     void WriteBL(uintptr_t addr, uintptr_t dest) // BL instruction
     {
@@ -235,39 +241,56 @@ namespace ARMPatch
                            ((((dest - addr - 4) >> 1) & 0x7FF | 0xE800) << 16);
         Write(addr, (uintptr_t)&newDest, sizeof(uintptr_t));
     }
-    void WriteRET(uintptr_t addr)
+    int WriteRET(uintptr_t addr)
     {
         #ifdef __32BIT
+        if(THUMBMODE(addr))
+        {
             Write(addr, (uintptr_t)"\x70\x47", 2);
-            //Write(addr, (uintptr_t)"\x1E\xFF\x2F\xE1", 4);
+            return 2;
+        }
+        else
+        {
+            Write(addr, (uintptr_t)"\x1E\xFF\x2F\xE1", 4);
+            return 4;
+        }
         #elif defined __64BIT
             Write(addr, (uintptr_t)"\xC0\x03\x5F\xD6", 4);
+            return 4;
         #endif
     }
-    void Redirect(uintptr_t addr, uintptr_t to) // Was taken from TheOfficialFloW's git repo, should not work on ARM64 rn
+    int Redirect(uintptr_t addr, uintptr_t to) // Was taken from TheOfficialFloW's git repo, should not work on ARM64 rn
     {
     #ifdef __32BIT
-        if(!addr) return;
+        if(!addr) return 0;
         uint32_t hook[2] = {0xE51FF004, to};
-        if(addr & 1)
+        int ret = 4;
+        if(addr & 0x1)
         {
-            addr &= ~1;
-            if (addr & 2)
+            addr &= ~0x1;
+            if (addr & 0x2)
             {
                 WriteNOP(addr, 1); 
                 addr += 2;
+                ret = 6;
             }
             hook[0] = 0xF000F8DF;
         }
         Write(addr, (uintptr_t)hook, sizeof(hook));
+        return ret;
     #elif defined __64BIT
         // TODO:
+        // Check if it works
+        Unprotect(addr, 8);
+        uint64_t newDest = to & 0xFFFFFFFFFFFFF000 | 0x00000094000000A8;
+        *(uintptr_t*)addr = newDest;
+        __asm__ __volatile__("isb");
+        return 8;
     #endif
     }
     bool hookInternal(void* addr, void* func, void** original)
     {
         if (addr == NULL || func == NULL || addr == func) return false;
-        //Unprotect((uintptr_t)addr, 10);
         #ifdef __32BIT
             return MSHookFunction(addr, func, original);
         #elif defined __64BIT
