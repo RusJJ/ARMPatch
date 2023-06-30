@@ -244,8 +244,9 @@ namespace ARMPatch
             return 4;
         }
         #elif defined __64BIT
-            // Starts with 0xEE
-            return 0;
+        // Probably, the range is [-0xFFFFFF, 0xFFFFFFF]
+        uint32_t newDest = 0x14000000 | (((dest - addr) >> 2) & 0x03FFFFFF);
+        return 4;
         #endif
     }
     void WriteBL(uintptr_t addr, uintptr_t dest) // BL instruction
@@ -283,10 +284,10 @@ namespace ARMPatch
         uint32_t newDest = (0x01 << 24) | (to << 16) | (from << 12);
         Write(addr, (uintptr_t)&newDest, sizeof(uintptr_t));
     }
-    int Redirect(uintptr_t addr, uintptr_t to) // Was taken from TheOfficialFloW's git repo, should not work on ARM64 rn
+    int Redirect(uintptr_t addr, uintptr_t to) // 32 bit version was taken from TheOfficialFloW's git repo
     {
+        if(!addr || !to) return 0;
     #ifdef __32BIT
-        if(!addr) return 0;
         uint32_t hook[2] = {0xE51FF004, to};
         int ret = 8;
         if(THUMBMODE(addr))
@@ -305,11 +306,10 @@ namespace ARMPatch
     #elif defined __64BIT
         // TODO:
         // Check if it works
-        Unprotect(addr, 8);
-        uint64_t newDest = to & 0xFFFFFFFFFFFFF000 | 0x00000094000000A8;
-        *(uintptr_t*)addr = newDest;
-        __asm__ __volatile__("isb");
-        return 8;
+        Unprotect(addr, 16);
+        uint64_t hook[2] = {0xD61F022058000051, to};
+        Write(addr, (uintptr_t)hook, sizeof(hook));
+        return 16;
     #endif
     }
     bool hookInternal(void* addr, void* func, void** original)
