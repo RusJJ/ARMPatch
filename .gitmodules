@@ -1,0 +1,9 @@
+[submodule "armpatch_src/And64InlineHook"]
+	path = armpatch_src/And64InlineHook
+	url = https://github.com/Rprop/And64InlineHook
+[submodule "armpatch_src/substrate"]
+	path = armpatch_src/substrate
+	url = https://github.com/RusJJ/substrate
+[submodule "armpatch_src/xDL"]
+	path = armpatch_src/xDL
+	url = https://github.com/hexhacking/xDL
