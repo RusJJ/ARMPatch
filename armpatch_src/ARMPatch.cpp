@@ -140,8 +140,8 @@ namespace ARMPatch
     {
         #ifdef __32BIT
         return mprotect((void*)(addr & 0xFFFFF000), len, PROT_READ | PROT_WRITE | PROT_EXEC);
-        #elif defined _64BIT
-        return mprotect((void*)(addr & ~(0x3UL)), len, PROT_READ | PROT_WRITE | PROT_EXEC);
+        #elif defined __64BIT
+        return mprotect((void*)(addr & 0xFFFFFFFFFFFFF000), len, PROT_READ | PROT_WRITE | PROT_EXEC);
         #endif
     }
     void Write(uintptr_t dest, uintptr_t src, size_t size)
@@ -242,6 +242,7 @@ namespace ARMPatch
             return 4;
         }
         #elif defined __64BIT
+            // Starts with 0xEE
             return 0;
         #endif
     }
@@ -318,12 +319,13 @@ namespace ARMPatch
             return A64HookFunction(addr, func, original);
         #endif
     }
-    void hookPLTInternal(void* addr, void* func, void** original)
+    bool hookPLTInternal(void* addr, void* func, void** original)
     {
-        if (addr == NULL || func == NULL || addr == func) return;
-        Unprotect((uintptr_t)addr, 8);
+        if (addr == NULL || func == NULL || addr == func) return false;
+        if(Unprotect((uintptr_t)addr, 8) != 0) return false;
         if(original != NULL) *((uintptr_t*)original) = *(uintptr_t*)addr;
         *(uintptr_t*)addr = (uintptr_t)func;
+        return true;
     }
     
     static bool CompareData(const uint8_t* data, const bytePattern::byteEntry* pattern, size_t patternlength)

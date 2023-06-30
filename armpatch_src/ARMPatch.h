@@ -227,16 +227,16 @@ namespace ARMPatch
         func - Call that function instead of an original
         original - Original function!
     */
-    void hookPLTInternal(void* addr, void* func, void** original);
+    bool hookPLTInternal(void* addr, void* func, void** original);
     template<class A, class B, class C>
-    void HookPLT(A addr, B func, C original)
+    bool HookPLT(A addr, B func, C original)
     {
-        hookPLTInternal((void*)addr, (void*)func, (void**)original);
+        return hookPLTInternal((void*)addr, (void*)func, (void**)original);
     }
     template<class A, class B>
-    void HookPLT(A addr, B func)
+    bool HookPLT(A addr, B func)
     {
-        hookPLTInternal((void*)addr, (void*)func, (void**)NULL);
+        return hookPLTInternal((void*)addr, (void*)func, (void**)NULL);
     }
     
     // xDL part
