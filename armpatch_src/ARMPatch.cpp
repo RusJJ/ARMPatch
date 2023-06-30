@@ -139,9 +139,11 @@ namespace ARMPatch
     int Unprotect(uintptr_t addr, size_t len)
     {
         #ifdef __32BIT
-        return mprotect((void*)(addr & 0xFFFFF000), len, PROT_READ | PROT_WRITE | PROT_EXEC);
+        if(mprotect((void*)(addr & 0xFFFFF000), len, PROT_READ | PROT_WRITE | PROT_EXEC) == 0) return 0;
+        return mprotect((void*)(addr & 0xFFFFF000), len, PROT_READ | PROT_WRITE);
         #elif defined __64BIT
-        return mprotect((void*)(addr & 0xFFFFFFFFFFFFF000), len, PROT_READ | PROT_WRITE | PROT_EXEC);
+        if(mprotect((void*)(addr & 0xFFFFFFFFFFFFF000), len, PROT_READ | PROT_WRITE | PROT_EXEC) == 0) return 0;
+        return mprotect((void*)(addr & 0xFFFFFFFFFFFFF000), len, PROT_READ | PROT_WRITE);
         #endif
     }
     void Write(uintptr_t dest, uintptr_t src, size_t size)
