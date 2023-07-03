@@ -262,9 +262,13 @@ namespace ARMPatch
     }
     void WriteBLX(uintptr_t addr, uintptr_t dest) // BLX instruction
     {
+        #ifdef __32BIT
         uint32_t newDest = ((dest - addr - 4) >> 12) & 0x7FF | 0xF000 |
                            ((((dest - addr - 4) >> 1) & 0x7FF | 0xE800) << 16);
         Write(addr, (uintptr_t)&newDest, sizeof(uintptr_t));
+        #elif defined __64BIT
+        __builtin_trap(); // ARMv8 doesnt have that instruction so using it is absurd!
+        #endif
     }
     int WriteRET(uintptr_t addr)
     {
