@@ -251,9 +251,14 @@ namespace ARMPatch
     }
     void WriteBL(uintptr_t addr, uintptr_t dest) // BL instruction
     {
+        #ifdef __32BIT
         uint32_t newDest = ((dest - addr - 4) >> 12) & 0x7FF | 0xF000 |
                            ((((dest - addr - 4) >> 1) & 0x7FF | 0xF800) << 16);
         Write(addr, (uintptr_t)&newDest, sizeof(uintptr_t));
+        #elif defined __64BIT
+        uint32_t newDest = 0x94000000 | (((dest - addr) >> 2) & 0x03FFFFFF);
+        Write(addr, (uintptr_t)&newDest, sizeof(uintptr_t));
+        #endif
     }
     void WriteBLX(uintptr_t addr, uintptr_t dest) // BLX instruction
     {
