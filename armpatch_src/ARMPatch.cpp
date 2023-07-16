@@ -246,6 +246,7 @@ namespace ARMPatch
         #elif defined __64BIT
         // Probably, the range is [-0xFFFFFF, 0xFFFFFFF]
         uint32_t newDest = 0x14000000 | (((dest - addr) >> 2) & 0x03FFFFFF);
+        Write(addr, (uintptr_t)&newDest, sizeof(uint32_t));
         return 4;
         #endif
     }
