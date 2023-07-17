@@ -13,8 +13,13 @@ endif
 include $(BUILD_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
+LOCAL_MODULE := dobby
+LOCAL_SRC_FILES := AML_PrecompiledLibs/$(TARGET_ARCH_ABI)/libdobby.a
+include $(PREBUILT_STATIC_LIBRARY)
+
+include $(CLEAR_VARS)
 LOCAL_CPP_EXTENSION := .cpp .cc
-LOCAL_SHARED_LIBRARIES := substrate
+LOCAL_SHARED_LIBRARIES := substrate dobby
 LOCAL_MODULE    := armpatch
 LOCAL_SRC_FILES := ARMPatch.cpp
 LOCAL_CFLAGS += -O2 -mfloat-abi=softfp -DNDEBUG
@@ -25,8 +30,8 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/xDL/xdl/src/main/cpp $(LOCAL_PATH)/xDL/xdl/src
 LOCAL_SRC_FILES += xDL/xdl/src/main/cpp/xdl.c xDL/xdl/src/main/cpp/xdl_iterate.c \
                    xDL/xdl/src/main/cpp/xdl_linker.c xDL/xdl/src/main/cpp/xdl_lzma.c \
                    xDL/xdl/src/main/cpp/xdl_util.c
-LOCAL_CFLAGS += -D__XDL
-LOCAL_CXXFLAGS += -D__XDL
+LOCAL_CFLAGS += -D__XDL -D__USEDOBBY
+LOCAL_CXXFLAGS += -D__XDL -D__USEDOBBY
 
 include $(BUILD_STATIC_LIBRARY) # Will build it to static .a library
 # include $(PREBUILT_SHARED_LIBRARY) # Can be used in LOCAL_SHARED_LIBRARIES

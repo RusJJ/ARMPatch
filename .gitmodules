@@ -7,3 +7,6 @@
 [submodule "armpatch_src/xDL"]
 	path = armpatch_src/xDL
 	url = https://github.com/hexhacking/xDL
+[submodule "armpatch_src/AML_PrecompiledLibs"]
+	path = armpatch_src/AML_PrecompiledLibs
+	url = https://github.com/RusJJ/AML_PrecompiledLibs

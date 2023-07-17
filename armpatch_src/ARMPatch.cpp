@@ -325,10 +325,14 @@ namespace ARMPatch
     bool hookInternal(void* addr, void* func, void** original)
     {
         if (addr == NULL || func == NULL || addr == func) return false;
-        #ifdef __32BIT
-            return MSHookFunction(addr, func, original);
-        #elif defined __64BIT
-            return A64HookFunction(addr, func, original);
+        #ifdef __USEDOBBY
+            return DobbyHook(addr, (dobby_dummy_func_t)func, (dobby_dummy_func_t*)original) == 0;
+        #else
+            #ifdef __32BIT
+                return MSHookFunction(addr, func, original);
+            #elif defined __64BIT
+                return A64HookFunction(addr, func, original);
+            #endif
         #endif
     }
     bool hookPLTInternal(void* addr, void* func, void** original)

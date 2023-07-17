@@ -7,6 +7,9 @@
 #ifdef __XDL
     #include "xdl.h"
 #endif
+#ifdef __USEDOBBY
+    #include "AML_PrecompiledLibs/include/dobby.h"
+#endif
 
 #ifdef __arm__
     #define __32BIT
@@ -135,6 +138,10 @@ namespace ARMPatch
         size - size of an info
     */
     void Write(uintptr_t dest, uintptr_t src, size_t size);
+    inline void Write(uintptr_t dest, const char* data)
+    {
+        Write(dest, (uintptr_t)data, strlen(data));
+    }
     
     /*
         Read memory (reprotects it)
