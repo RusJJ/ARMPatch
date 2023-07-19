@@ -292,10 +292,24 @@ namespace ARMPatch
     void WriteMOV(uintptr_t addr, ARMRegister from, ARMRegister to)
     {
         #ifdef __32BIT
-        uint32_t newDest = (0x01 << 24) | (to << 16) | (from << 12);
-        Write(addr, (uintptr_t)&newDest, sizeof(uintptr_t));
+        if(THUMBMODE(addr))
+        {
+            uint32_t newDest = (0x01 << 24) | (to << 16) | (from << 12);
+        }
+        else
+        {
+            
+        }
+        Write(addr, (uintptr_t)&newDest, sizeof(uint32_t));
         #elif defined __64BIT
-        
+        uint32_t newDest = 0x0;
+        if(from >= ARM_REG_X0)
+        {
+            from -= ARM_REG_X0;
+            to -= ARM_REG_X0;
+            newDest = 0x0;
+        }
+        Write(addr, (uintptr_t)&newDest, sizeof(uint32_t));
         #endif
     }
     int Redirect(uintptr_t addr, uintptr_t to)
