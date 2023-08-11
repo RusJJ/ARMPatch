@@ -258,7 +258,7 @@ namespace ARMPatch
         Write(addr, (uintptr_t)&newDest, sizeof(uintptr_t));
         #elif defined __64BIT
         uint32_t newDest = 0x94000000 | (((dest - addr) >> 2) & 0x03FFFFFF);
-        Write(addr, (uintptr_t)&newDest, sizeof(uintptr_t));
+        Write(addr, (uintptr_t)&newDest, sizeof(uint32_t));
         #endif
     }
     void WriteBLX(uintptr_t addr, uintptr_t dest) // BLX instruction
@@ -266,7 +266,7 @@ namespace ARMPatch
         #ifdef __32BIT
         uint32_t newDest = ((dest - addr - 4) >> 12) & 0x7FF | 0xF000 |
                            ((((dest - addr - 4) >> 1) & 0x7FF | 0xE800) << 16);
-        Write(addr, (uintptr_t)&newDest, sizeof(uintptr_t));
+        Write(addr, (uintptr_t)&newDest, sizeof(uint32_t));
         #elif defined __64BIT
         __builtin_trap(); // ARMv8 doesnt have that instruction so using it is absurd!
         #endif
@@ -291,10 +291,28 @@ namespace ARMPatch
     }
     void WriteMOV(uintptr_t addr, ARMRegister from, ARMRegister to)
     {
-        uint32_t newDest = (0x01 << 24) | (to << 16) | (from << 12);
-        Write(addr, (uintptr_t)&newDest, sizeof(uintptr_t));
+        #ifdef __32BIT
+        if(THUMBMODE(addr))
+        {
+            uint32_t newDest = (0x01 << 24) | (to << 16) | (from << 12);
+        }
+        else
+        {
+            
+        }
+        Write(addr, (uintptr_t)&newDest, sizeof(uint32_t));
+        #elif defined __64BIT
+        uint32_t newDest = 0x0;
+        if(from >= ARM_REG_X0)
+        {
+            from -= ARM_REG_X0;
+            to -= ARM_REG_X0;
+            newDest = 0x0;
+        }
+        Write(addr, (uintptr_t)&newDest, sizeof(uint32_t));
+        #endif
     }
-    int Redirect(uintptr_t addr, uintptr_t to) // 32 bit version was taken from TheOfficialFloW's git repo
+    int Redirect(uintptr_t addr, uintptr_t to)
     {
         if(!addr || !to) return 0;
     #ifdef __32BIT
@@ -314,8 +332,6 @@ namespace ARMPatch
         Write(DETHUMB(addr), (uintptr_t)hook, sizeof(hook));
         return ret;
     #elif defined __64BIT
-        // TODO:
-        // Check if it works
         Unprotect(addr, 16);
         uint64_t hook[2] = {0xD61F022058000051, to};
         Write(addr, (uintptr_t)hook, sizeof(hook));
