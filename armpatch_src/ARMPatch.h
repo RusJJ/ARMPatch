@@ -3,12 +3,13 @@
 #include <dlfcn.h>
 #include <sys/mman.h>
 
+#define __USE_GLOSSHOOK
 
 #ifdef __XDL
     #include "xdl.h"
 #endif
-#ifdef __USEDOBBY
-    #include "AML_PrecompiledLibs/include/dobby.h"
+#ifdef __USE_GLOSSHOOK
+    #include "AML_PrecompiledLibs/include/Gloss.h"
 #endif
 
 #ifdef __arm__
@@ -70,23 +71,7 @@ enum ARMRegister : char
 #elif defined __64BIT
 enum ARMRegister : char
 {
-    ARM_REG_W0,  ARM_REG_W1,  ARM_REG_W2,  ARM_REG_W3,
-    ARM_REG_W4,  ARM_REG_W5,  ARM_REG_W6,  ARM_REG_W7,
-    ARM_REG_W8,  ARM_REG_W9,  ARM_REG_W10, ARM_REG_W11,
-    ARM_REG_W12, ARM_REG_W13, ARM_REG_W14, ARM_REG_W15,
-    ARM_REG_W16, ARM_REG_W17, ARM_REG_W18, ARM_REG_W19,
-    ARM_REG_W20, ARM_REG_W21, ARM_REG_W22, ARM_REG_W23,
-    ARM_REG_W24, ARM_REG_W25, ARM_REG_W26, ARM_REG_W27,
-    ARM_REG_W28, ARM_REG_W29, ARM_REG_W30, ARM_REG_W31,
-
-    ARM_REG_X0,  ARM_REG_X1,  ARM_REG_X2,  ARM_REG_X3,
-    ARM_REG_X4,  ARM_REG_X5,  ARM_REG_X6,  ARM_REG_X7,
-    ARM_REG_X8,  ARM_REG_X9,  ARM_REG_X10, ARM_REG_X11,
-    ARM_REG_X12, ARM_REG_X13, ARM_REG_X14, ARM_REG_X15,
-    ARM_REG_X16, ARM_REG_X17, ARM_REG_X18, ARM_REG_X19,
-    ARM_REG_X20, ARM_REG_X21, ARM_REG_X22, ARM_REG_X23,
-    ARM_REG_X24, ARM_REG_X25, ARM_REG_X26, ARM_REG_X27,
-    ARM_REG_X28, ARM_REG_X29, ARM_REG_X30, ARM_REG_X31,
+    
     
     ARM_REG_INVALID
 };
@@ -225,6 +210,8 @@ namespace ARMPatch
         scanLen - how much to scan from libStart
     */
     uintptr_t GetAddressFromPattern(const char* pattern, uintptr_t libStart, uintptr_t scanLen);
+
+    uintptr_t GetAddressFromPattern(const char* pattern, const char* soLib, const char* section);
     
     /*
         Cydia's Substrate / Rprop's Inline Hook (use hook instead of hookInternal, ofc reprotects it!)
@@ -232,14 +219,14 @@ namespace ARMPatch
         func - Call that function instead of an original
         original - Original function!
     */
-    bool hookInternal(void* addr, void* func, void** original);
+    void* hookInternal(void* addr, void* func, void** original);
     template<class A, class B, class C>
-    bool Hook(A addr, B func, C original)
+    void* Hook(A addr, B func, C original)
     {
         return hookInternal((void*)addr, (void*)func, (void**)original);
     }
     template<class A, class B>
-    bool Hook(A addr, B func)
+    void* Hook(A addr, B func)
     {
         return hookInternal((void*)addr, (void*)func, (void**)NULL);
     }
@@ -250,17 +237,23 @@ namespace ARMPatch
         func - Call that function instead of an original
         original - Original function!
     */
-    bool hookPLTInternal(void* addr, void* func, void** original);
+    void* hookPLTInternal(void* addr, void* func, void** original);
     template<class A, class B, class C>
-    bool HookPLT(A addr, B func, C original)
+    void* HookPLT(A addr, B func, C original)
     {
         return hookPLTInternal((void*)addr, (void*)func, (void**)original);
     }
     template<class A, class B>
-    bool HookPLT(A addr, B func)
+    void* HookPLT(A addr, B func)
     {
         return hookPLTInternal((void*)addr, (void*)func, (void**)NULL);
     }
+
+    void* hook_b(void* addr, void* func, void** original);
+    void* hook_bl(void* addr, void* func, void** original);
+    void* hook_blx(void* addr, void* func, void** original);
+
+    void* hook_patch(void* addr, GlossHookPatchCallback func, bool is_4byte_jump);
     
     // xDL part
     bool IsCorrectXDLHandle(void* ptr);
