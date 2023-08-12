@@ -19,17 +19,13 @@ include $(PREBUILT_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_CPP_EXTENSION := .cpp .cc
-LOCAL_SHARED_LIBRARIES := substrate GlossHook
-LOCAL_MODULE    := armpatch
+LOCAL_SHARED_LIBRARIES := substrate
+LOCAL_STATIC_LIBRARIES := libGlossHook
+LOCAL_MODULE  := armpatch
 LOCAL_SRC_FILES := ARMPatch.cpp
 LOCAL_CFLAGS += -O2 -mfloat-abi=softfp -DNDEBUG
-LOCAL_LDLIBS += -llog # ARM64 library requires for shared library (because that substrate was made with logs support)
-
- ## xDL ##
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/xDL/xdl/src/main/cpp $(LOCAL_PATH)/xDL/xdl/src/main/cpp/include
-LOCAL_SRC_FILES += xDL/xdl/src/main/cpp/xdl.c xDL/xdl/src/main/cpp/xdl_iterate.c \
-                   xDL/xdl/src/main/cpp/xdl_linker.c xDL/xdl/src/main/cpp/xdl_lzma.c \
-                   xDL/xdl/src/main/cpp/xdl_util.c
+LOCAL_LDLIBS += -llog -ldl # ARM64 library requires for shared library (because that substrate was made with logs support)
+LOCAL_C_INCLUDES += AML_PrecompiledLibs/include
 LOCAL_CFLAGS += -D__XDL -D__USE_GLOSSHOOK
 LOCAL_CXXFLAGS += -D__XDL -D__USE_GLOSSHOOK
 

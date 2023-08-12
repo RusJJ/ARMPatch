@@ -201,7 +201,7 @@ namespace ARMPatch
     */
     int WriteRET(uintptr_t addr);
     
-    void WriteMOV(uintptr_t addr, ARMRegister from, ARMRegister to);
+    void WriteMOV(uintptr_t addr, uint8_t from, uint8_t to);
     
     /*
         Place LDR instruction (moves directly to the function with the same stack!)

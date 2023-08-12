@@ -289,12 +289,13 @@ namespace ARMPatch
             return 4;
         #endif
     }
-    void WriteMOV(uintptr_t addr, ARMRegister from, ARMRegister to)
+    void WriteMOV(uintptr_t addr, uint8_t from, uint8_t to)
     {
         #ifdef __32BIT
+        uint32_t newDest;
         if(THUMBMODE(addr))
         {
-            uint32_t newDest = (0x01 << 24) | (to << 16) | (from << 12);
+            newDest = (0x01 << 24) | (to << 16) | (from << 12);
         }
         else
         {
@@ -303,6 +304,7 @@ namespace ARMPatch
         Write(addr, (uintptr_t)&newDest, sizeof(uint32_t));
         #elif defined __64BIT
         uint32_t newDest = 0x0;
+
         if(from >= ARM_REG_X0)
         {
             from -= ARM_REG_X0;
