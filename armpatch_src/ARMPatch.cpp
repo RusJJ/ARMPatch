@@ -26,17 +26,6 @@ inline void* xdl_cache(void* ptr)
 namespace ARMPatch
 {
     bool bThumbMode = false;
-    static const char* __iter_dlName;
-    static int __iter_callback(struct dl_phdr_info *info, size_t size, void *data)
-    {
-        if ((void *)info->dlpi_addr == data)
-        {
-            __iter_dlName = info->dlpi_name;
-            return 1;
-        }
-        return 0;
-    }
-    
     const char* GetPatchVer()
     {
         #define STRSTRSECPASS(_AA) #_AA
@@ -72,21 +61,24 @@ namespace ARMPatch
     }
     void* GetLibHandle(const char* soLib)
     {
-        #ifdef __XDL
-        return xdl_cache(xdl_open(soLib, XDL_DEFAULT));
+        #if (defined __USE_GLOSSHOOK) && (defined __XDL)
+        return xdl_cache(GlossOpen(soLib)); //fix xdl_open ads path
         #else
         return dlopen(soLib, RTLD_LAZY);
         #endif
     }
     void* GetLibHandle(uintptr_t addr)
     {
-        __iter_dlName = NULL;
-        #ifdef __XDL
-        xdl_iterate_phdr(__iter_callback, (void*)addr, XDL_DEFAULT);
-        return xdl_cache(xdl_open(__iter_dlName, XDL_DEFAULT));
+        #if (defined __USE_GLOSSHOOK) && (defined __XDL)
+        xdl_info_t info;
+        void* cache = NULL;
+        if (xdl_addr((void*)addr, &info, &cache) == 0) return NULL;
+        xdl_addr_clean(&cache);
+        return xdl_cache(GlossOpen(info.dli_fname));
         #else
-        dl_iterate_phdr(__iter_callback, (void*)addr);
-        return dlopen(__iter_dlName, RTLD_LAZY);
+        Dl_info info;
+        if (dladdr((void*)addr, &info) == 0) return NULL;
+        return dlopen(info.dli_fname, RTLD_LAZY);
         #endif
     }
     uintptr_t GetLibLength(const char* soLib)
@@ -125,14 +117,17 @@ namespace ARMPatch
     }
     uintptr_t GetSym(uintptr_t libAddr, const char* sym)
     {
-        __iter_dlName = NULL;
-        #ifdef __XDL
-        xdl_iterate_phdr(__iter_callback, (void*)libAddr, XDL_DEFAULT);
-        void* handle = xdl_cache(xdl_open(__iter_dlName, XDL_DEFAULT));
+        #if (defined __USE_GLOSSHOOK) && (defined __XDL)
+        xdl_info_t info;
+        void* cache = NULL;
+        if (xdl_addr((void*)libAddr, &info, &cache) == 0) return 0;
+        xdl_addr_clean(&cache);
+        void* handle = xdl_cache(GlossOpen(info.dli_fname));
         return (uintptr_t)xdl_sym(handle, sym, NULL);
         #else
-        dl_iterate_phdr(__iter_callback, (void*)libAddr);
-        void* handle = dlopen(__iter_dlName, RTLD_LAZY);
+        Dl_info info;
+        if (dladdr((void*)addr, &info) == 0) return 0;
+        void* handle = dlopen(info.dli_fname, RTLD_LAZY);
         return (uintptr_t)dlsym(handle, sym);
         #endif
     }
@@ -367,6 +362,8 @@ namespace ARMPatch
             return NULL;
         #endif
     }
+
+    #ifdef __USE_GLOSSHOOK
     void* hook_b(void* addr, void* func, void** original)
     {
         if (addr == NULL || func == NULL || addr == func) return NULL;
@@ -410,6 +407,7 @@ namespace ARMPatch
     #endif
         return GlossHookPatch(addr, func, is_4byte_jump, mode);
     }
+    #endif
     
     static bool CompareData(const uint8_t* data, const bytePattern::byteEntry* pattern, size_t patternlength)
     {
@@ -493,13 +491,18 @@ namespace ARMPatch
         }
         return (uintptr_t)0;
     }
+    
     uintptr_t GetAddressFromPattern(const char* pattern, const char* soLib, const char* section)
     {
+        #ifdef __USE_GLOSSHOOK
         size_t size = 0;
         uintptr_t addr = GlossGetLibSection(soLib, section, &size);
         if (!addr) return GetAddressFromPattern(pattern, soLib);
         return GetAddressFromPattern(pattern, addr, size);
+        #endif
+        return (uintptr_t)0;
     }
+  
     
     // xDL part
     bool IsCorrectXDLHandle(void* ptr)
@@ -518,34 +521,35 @@ namespace ARMPatch
         #endif
         return 0;
     }
-    uintptr_t GetAddrBaseXDL(uintptr_t addr)
+    
+    uintptr_t GetRecentSymAddrXDL(uintptr_t addr)
     {
         #ifdef __XDL
         xdl_info_t info;
         void* cache = NULL;
         if(!xdl_addr((void*)addr, &info, &cache)) return 0;
         xdl_addr_clean(&cache);
-        return (uintptr_t)info.dli_saddr;
+        return (uintptr_t)info.dli_saddr; //sym_addr
         #endif
         return 0;
     }
-    size_t GetSymSizeXDL(void* ptr)
+    size_t GetSymSizeXDL(uintptr_t addr)
     {
         #ifdef __XDL
         xdl_info_t info;
         void* cache = NULL;
-        if(!xdl_addr(ptr, &info, &cache)) return 0;
+        if(!xdl_addr((void*)addr, &info, &cache)) return 0;
         xdl_addr_clean(&cache);
-        return info.dli_ssize;
+        return info.dli_ssize; //sym_size
         #endif
         return 0;
     }
-    const char* GetSymNameXDL(void* ptr)
+    const char* GetSymNameXDL(uintptr_t addr)
     {
         #ifdef __XDL
         xdl_info_t info;
         void* cache = NULL;
-        if(!xdl_addr(ptr, &info, &cache)) return NULL;
+        if(!xdl_addr((void*)addr, &info, &cache)) return NULL;
         xdl_addr_clean(&cache);
         return info.dli_sname;
         #endif

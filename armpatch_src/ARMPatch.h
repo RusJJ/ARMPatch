@@ -3,7 +3,6 @@
 #include <dlfcn.h>
 #include <sys/mman.h>
 
-
 #ifdef __XDL
     #include "xdl.h"
 #endif
@@ -15,7 +14,7 @@
     #define __32BIT
     #define DETHUMB(_a) ((uintptr_t)_a & ~0x1)
     #define RETHUMB(_a) ((uintptr_t)_a | 0x1)
-    #define THUMBMODE(_a) (((uintptr_t)_a & 0x1)||((uintptr_t)_a & 0x2)||ARMPatch::bThumbMode||(ARMPatch::GetAddrBaseXDL((uintptr_t)_a) & 0x1))
+    #define THUMBMODE(_a) (((uintptr_t)_a & 0x1)||((uintptr_t)_a & 0x2)||ARMPatch::bThumbMode||(ARMPatch::GetRecentSymAddrXDL((uintptr_t)_a) & 0x1))
     extern "C" bool MSHookFunction(void* symbol, void* replace, void** result);
 #elif defined __aarch64__
     #define __64BIT
@@ -263,17 +262,18 @@ namespace ARMPatch
     {
         return hookPLTInternal((void*)addr, (void*)func, (void**)NULL);
     }
-
+    
+#ifdef __USE_GLOSSHOOK
     void* hook_b(void* addr, void* func, void** original);
     void* hook_bl(void* addr, void* func, void** original);
     void* hook_blx(void* addr, void* func, void** original);
-
     void* hook_patch(void* addr, GlossHookPatchCallback func, bool is_4byte_jump);
+#endif
     
     // xDL part
     bool IsCorrectXDLHandle(void* ptr);
     uintptr_t GetLibXDL(void* ptr);
-    uintptr_t GetAddrBaseXDL(uintptr_t addr);
-    size_t GetSymSizeXDL(void* ptr);
-    const char* GetSymNameXDL(void* ptr);
+    uintptr_t GetRecentSymAddrXDL(uintptr_t addr);
+    size_t GetSymSizeXDL(uintptr_t addr);
+    const char* GetSymNameXDL(uintptr_t addr);
 }
