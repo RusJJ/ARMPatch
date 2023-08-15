@@ -2,7 +2,7 @@
 #include <ctype.h>
 #include <link.h>
 
-#ifdef __XDL
+#ifdef __USE_GLOSSHOOK
 void* xdl_cached[100] {0}; // Much more enough
 int cache_c = 0;
 
@@ -61,7 +61,7 @@ namespace ARMPatch
     }
     void* GetLibHandle(const char* soLib)
     {
-        #if (defined __USE_GLOSSHOOK) && (defined __XDL)
+        #ifdef __USE_GLOSSHOOK
         return xdl_cache(GlossOpen(soLib)); //fix xdl_open ads path
         #else
         return dlopen(soLib, RTLD_LAZY);
@@ -69,7 +69,7 @@ namespace ARMPatch
     }
     void* GetLibHandle(uintptr_t addr)
     {
-        #if (defined __USE_GLOSSHOOK) && (defined __XDL)
+        #ifdef __USE_GLOSSHOOK
         xdl_info_t info;
         void* cache = NULL;
         if (xdl_addr((void*)addr, &info, &cache) == 0) return NULL;
@@ -105,7 +105,7 @@ namespace ARMPatch
     }
     uintptr_t GetSym(void* handle, const char* sym)
     {
-        #ifdef __XDL
+        #ifdef __USE_GLOSSHOOK
         if(xdl_is_cached(handle))
         {
             void* ret = xdl_sym(handle, sym, NULL);
@@ -117,7 +117,7 @@ namespace ARMPatch
     }
     uintptr_t GetSym(uintptr_t libAddr, const char* sym)
     {
-        #if (defined __USE_GLOSSHOOK) && (defined __XDL)
+        #ifdef __USE_GLOSSHOOK
         xdl_info_t info;
         void* cache = NULL;
         if (xdl_addr((void*)libAddr, &info, &cache) == 0) return 0;
@@ -342,11 +342,15 @@ namespace ARMPatch
             return GlossHook(addr, func, original);
         #else
             #ifdef __32BIT
-                MSHookFunction(addr, func, original);
-                return NULL;
+                if (MSHookFunction(addr, func, original) == true)
+                    return addr;
+                else
+                    return NULL;
             #elif defined __64BIT
-                A64HookFunction(addr, func, original);
-                return NULL;
+                if (A64HookFunction(addr, func, original) == true)
+                    return addr;
+                else
+                    return NULL;
             #endif
         #endif
     }
@@ -394,6 +398,7 @@ namespace ARMPatch
         return GlossHookBranchBLX(addr, func, original, mode);
     #elif defined __64BIT
         __builtin_trap(); // ARMv8 doesnt have that instruction so using it is absurd!
+        return NULL;
     #endif
     }
 
@@ -507,14 +512,14 @@ namespace ARMPatch
     // xDL part
     bool IsCorrectXDLHandle(void* ptr)
     {
-        #ifdef __XDL
+        #ifdef __USE_GLOSSHOOK
         return xdl_is_cached(ptr);
         #endif
         return false;
     }
     uintptr_t GetLibXDL(void* ptr)
     {
-        #ifdef __XDL
+        #ifdef __USE_GLOSSHOOK
         xdl_info_t info;
         if (xdl_info(ptr, XDL_DI_DLINFO, &info) == -1) return 0;
         return (uintptr_t)info.dli_fbase;
@@ -522,9 +527,9 @@ namespace ARMPatch
         return 0;
     }
     
-    uintptr_t GetRecentSymAddrXDL(uintptr_t addr)
+    uintptr_t GetSymAddrXDL(uintptr_t addr)
     {
-        #ifdef __XDL
+        #ifdef __USE_GLOSSHOOK
         xdl_info_t info;
         void* cache = NULL;
         if(!xdl_addr((void*)addr, &info, &cache)) return 0;
@@ -535,7 +540,7 @@ namespace ARMPatch
     }
     size_t GetSymSizeXDL(uintptr_t addr)
     {
-        #ifdef __XDL
+        #ifdef __USE_GLOSSHOOK
         xdl_info_t info;
         void* cache = NULL;
         if(!xdl_addr((void*)addr, &info, &cache)) return 0;
@@ -546,7 +551,7 @@ namespace ARMPatch
     }
     const char* GetSymNameXDL(uintptr_t addr)
     {
-        #ifdef __XDL
+        #ifdef __USE_GLOSSHOOK
         xdl_info_t info;
         void* cache = NULL;
         if(!xdl_addr((void*)addr, &info, &cache)) return NULL;

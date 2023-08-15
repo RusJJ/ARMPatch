@@ -3,10 +3,8 @@
 #include <dlfcn.h>
 #include <sys/mman.h>
 
-#ifdef __XDL
-    #include "xdl.h"
-#endif
 #ifdef __USE_GLOSSHOOK
+    #include "AML_PrecompiledLibs/include/xdl.h" //Gloss inline xdl lib.
     #include "AML_PrecompiledLibs/include/Gloss.h"
 #endif
 
@@ -14,7 +12,7 @@
     #define __32BIT
     #define DETHUMB(_a) ((uintptr_t)_a & ~0x1)
     #define RETHUMB(_a) ((uintptr_t)_a | 0x1)
-    #define THUMBMODE(_a) (((uintptr_t)_a & 0x1)||((uintptr_t)_a & 0x2)||ARMPatch::bThumbMode||(ARMPatch::GetRecentSymAddrXDL((uintptr_t)_a) & 0x1))
+    #define THUMBMODE(_a) (((uintptr_t)_a & 0x1)||((uintptr_t)_a & 0x2)||ARMPatch::bThumbMode||(ARMPatch::GetSymAddrXDL((uintptr_t)_a) & 0x1))
     extern "C" bool MSHookFunction(void* symbol, void* replace, void** result);
 #elif defined __aarch64__
     #define __64BIT
@@ -224,7 +222,13 @@ namespace ARMPatch
         scanLen - how much to scan from libStart
     */
     uintptr_t GetAddressFromPattern(const char* pattern, uintptr_t libStart, uintptr_t scanLen);
-
+    
+    /*
+        ByteScanner
+        pattern - pattern.
+        soLib - library's name
+        section - section name (eg: .text .data .bss .plt .got...)
+    */
     uintptr_t GetAddressFromPattern(const char* pattern, const char* soLib, const char* section);
     
     /*
@@ -273,7 +277,7 @@ namespace ARMPatch
     // xDL part
     bool IsCorrectXDLHandle(void* ptr);
     uintptr_t GetLibXDL(void* ptr);
-    uintptr_t GetRecentSymAddrXDL(uintptr_t addr);
+    uintptr_t GetSymAddrXDL(uintptr_t addr);
     size_t GetSymSizeXDL(uintptr_t addr);
     const char* GetSymNameXDL(uintptr_t addr);
 }
