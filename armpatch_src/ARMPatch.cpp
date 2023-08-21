@@ -502,6 +502,7 @@ namespace ARMPatch
         #ifdef __USE_GLOSSHOOK
         size_t size = 0;
         uintptr_t addr = GlossGetLibSection(soLib, section, &size);
+        if (pattern == NULL) return addr;
         if (!addr) return GetAddressFromPattern(pattern, soLib);
         return GetAddressFromPattern(pattern, addr, size);
         #endif
