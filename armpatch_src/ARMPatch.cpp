@@ -575,4 +575,50 @@ namespace ARMPatch
 
     // GlossHook part
 
+    bool hookBranchInternal(void* addr, void* func, void** original)
+    {
+        #ifdef __USEGLOSS
+            if (addr == NULL || func == NULL || addr == func) return false;
+            #ifdef __32BIT
+                i_set mode = $ARM;
+                if (THUMBMODE(addr)) mode = $THUMB;
+            #else
+                i_set mode = $ARM64;
+            #endif
+            return GlossHookBranchB(addr, func, original, mode) != NULL;
+        #else
+            return false;
+        #endif
+    }
+
+    bool hookBranchLinkInternal(void* addr, void* func, void** original)
+    {
+        #ifdef __USEGLOSS
+            if (addr == NULL || func == NULL || addr == func) return false;
+            #ifdef __32BIT
+                i_set mode = $ARM;
+                if (THUMBMODE(addr)) mode = $THUMB;
+            #else
+                i_set mode = $ARM64;
+            #endif
+            return GlossHookBranchBL(addr, func, original, mode) != NULL;
+        #else
+            return false;
+        #endif
+    }
+
+    bool hookBranchLinkXInternal(void* addr, void* func, void** original)
+    {
+        #ifdef __USEGLOSS
+            if (addr == NULL || func == NULL || addr == func) return false;
+            #ifdef __32BIT
+                if (THUMBMODE(addr)) return GlossHookBranchBLX(addr, func, original, $THUMB) != NULL;
+                else return GlossHookBranchBLX(addr, func, original, $ARM) != NULL;
+            #else
+                __builtin_trap();
+            #endif
+        #else
+            return false;
+        #endif
+    }
 }

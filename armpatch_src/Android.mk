@@ -35,8 +35,8 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/xDL/xdl/src/main/cpp $(LOCAL_PATH)/xDL/xdl/src
 LOCAL_SRC_FILES += xDL/xdl/src/main/cpp/xdl.c xDL/xdl/src/main/cpp/xdl_iterate.c \
                    xDL/xdl/src/main/cpp/xdl_linker.c xDL/xdl/src/main/cpp/xdl_lzma.c \
                    xDL/xdl/src/main/cpp/xdl_util.c
-LOCAL_CFLAGS += -D__XDL -D__USEDOBBY
-LOCAL_CXXFLAGS += -D__XDL -D__USEDOBBY
+LOCAL_CFLAGS += -D__XDL -D__USEGLOSS
+LOCAL_CXXFLAGS += -D__XDL -D__USEGLOSS
 
 include $(BUILD_STATIC_LIBRARY) # Will build it to static .a library
 # include $(PREBUILT_SHARED_LIBRARY) # Can be used in LOCAL_SHARED_LIBRARIES

@@ -268,16 +268,10 @@ namespace ARMPatch
         original - Original function!
     */
     bool hookInternal(void* addr, void* func, void** original);
-    template<class A, class B, class C>
-    bool Hook(A addr, B func, C original)
-    {
-        return hookInternal((void*)addr, (void*)func, (void**)original);
-    }
     template<class A, class B>
-    bool Hook(A addr, B func)
-    {
-        return hookInternal((void*)addr, (void*)func, (void**)NULL);
-    }
+    bool Hook(A addr, B func) { return hookInternal((void*)addr, (void*)func, (void**)NULL); }
+    template<class A, class B, class C>
+    bool Hook(A addr, B func, C original) { return hookInternal((void*)addr, (void*)func, (void**)original); }
     
     /*
         A simple hook of a PLT-section functions (use HookPLT instead of hookPLTInternal, ofc reprotects it!)
@@ -286,16 +280,10 @@ namespace ARMPatch
         original - Original function!
     */
     bool hookPLTInternal(void* addr, void* func, void** original);
-    template<class A, class B, class C>
-    bool HookPLT(A addr, B func, C original)
-    {
-        return hookPLTInternal((void*)addr, (void*)func, (void**)original);
-    }
     template<class A, class B>
-    bool HookPLT(A addr, B func)
-    {
-        return hookPLTInternal((void*)addr, (void*)func, (void**)NULL);
-    }
+    bool HookPLT(A addr, B func) { return hookPLTInternal((void*)addr, (void*)func, (void**)NULL); }
+    template<class A, class B, class C>
+    bool HookPLT(A addr, B func, C original) { return hookPLTInternal((void*)addr, (void*)func, (void**)original); }
     
     // xDL part
     bool IsCorrectXDLHandle(void* ptr);
@@ -303,4 +291,30 @@ namespace ARMPatch
     uintptr_t GetAddrBaseXDL(uintptr_t addr);
     size_t GetSymSizeXDL(void* ptr);
     const char* GetSymNameXDL(void* ptr);
+    
+    // GlossHook part
+
+    /*
+        A branch hook
+        addr - what to hook?
+        func - Call that function instead of an original
+        original - Original function!
+    */
+    bool hookBranchInternal(void* addr, void* func, void** original);
+    template<class A, class B>
+    bool HookB(A addr, B func) { return hookBranchInternal((void*)addr, (void*)func, (void**)NULL); }
+    template<class A, class B, class C>
+    bool HookB(A addr, B func, C original) { return hookBranchInternal((void*)addr, (void*)func, (void**)original); }
+    
+    bool hookBranchLinkInternal(void* addr, void* func, void** original);
+    template<class A, class B>
+    bool HookBL(A addr, B func) { return hookBranchLinkInternal((void*)addr, (void*)func, (void**)NULL); }
+    template<class A, class B, class C>
+    bool HookBL(A addr, B func, C original) { return hookBranchLinkInternal((void*)addr, (void*)func, (void**)original); }
+
+    bool hookBranchLinkXInternal(void* addr, void* func, void** original);
+    template<class A, class B>
+    bool HookBLX(A addr, B func) { return hookBranchLinkXInternal((void*)addr, (void*)func, (void**)NULL); }
+    template<class A, class B, class C>
+    bool HookBLX(A addr, B func, C original) { return hookBranchLinkXInternal((void*)addr, (void*)func, (void**)original); }
 }
