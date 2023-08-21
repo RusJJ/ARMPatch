@@ -267,7 +267,7 @@ namespace ARMPatch
         #ifdef __32BIT
         if(THUMBMODE(addr))
         {
-            intptr_t calc = (int)(0.5f * (dest - addr));
+            intptr_t calc = ((intptr_t)dest - (intptr_t)addr) / 2;
             if(calc >= -1 && calc < 1) return 0;
             else if(calc < -1)
             {
@@ -275,18 +275,14 @@ namespace ARMPatch
             }
             else if(calc == 1)
             {
-                WriteNOP(addr, 1);
-                return 2;
+                return WriteNOP(addr, 1);
             }
             
             calc -= 2; // PC
             if(calc <= 255)
             {
-                addr = DETHUMB(addr);
-                Unprotect(addr, 2);
-                (*(unsigned char*)(addr + 0)) = (unsigned char)calc;
-                (*(char*)(addr + 1)) = 0xE0;
-                cacheflush(addr, addr + 2, 0);
+                unsigned char code[2] = { (unsigned char)calc, 0xE0 };
+                Write(DETHUMB(addr), (uintptr_t)&code, 2);
                 return 2;
             }
             else
@@ -296,7 +292,7 @@ namespace ARMPatch
                 uint32_t imm_val = (dest - addr - 4) & 0x7FFFFF;
                 uint32_t newDest = ((imm_val & 0xFFF) >> 1 | 0xB800) << 16 | (imm_val >> 12 | 0xF000);
 
-                Write(DETHUMB(addr), (uintptr_t)&newDest, sizeof(uint32_t));
+                Write(DETHUMB(addr), newDest);
                 return 4;
             }
         }
