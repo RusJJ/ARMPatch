@@ -36,7 +36,7 @@ namespace ARMPatch
         }
         return 0;
     }
-    
+
     const char* GetPatchVer()
     {
         #define STRSTRSECPASS(_AA) #_AA
@@ -48,6 +48,7 @@ namespace ARMPatch
         return "ARMPatch v." STRSTRMACRO(ARMPATCH_VER) " (64-bit) (compiled " __DATE__ " " __TIME__ ")";
         #endif
     }
+
     int GetPatchVerInt() { return ARMPATCH_VER; }
     uintptr_t GetLib(const char* soLib)
     {
@@ -70,6 +71,7 @@ namespace ARMPatch
         }
         return address;
     }
+
     void* GetLibHandle(const char* soLib)
     {
         #ifdef __XDL
@@ -78,6 +80,7 @@ namespace ARMPatch
         return dlopen(soLib, RTLD_LAZY);
         #endif
     }
+
     void* GetLibHandle(uintptr_t addr)
     {
         __iter_dlName = NULL;
@@ -89,6 +92,7 @@ namespace ARMPatch
         return dlopen(__iter_dlName, RTLD_LAZY);
         #endif
     }
+
     uintptr_t GetLibLength(const char* soLib)
     {
         FILE *fp = NULL;
@@ -111,6 +115,7 @@ namespace ARMPatch
         }
         return end_address - address;
     }
+
     uintptr_t GetSym(void* handle, const char* sym)
     {
         #ifdef __XDL
@@ -123,6 +128,7 @@ namespace ARMPatch
         #endif
         return (uintptr_t)dlsym(handle, sym);
     }
+
     uintptr_t GetSym(uintptr_t libAddr, const char* sym)
     {
         __iter_dlName = NULL;
@@ -136,6 +142,7 @@ namespace ARMPatch
         return (uintptr_t)dlsym(handle, sym);
         #endif
     }
+
     int Unprotect(uintptr_t addr, size_t len)
     {
         #ifdef __32BIT
@@ -146,58 +153,115 @@ namespace ARMPatch
         return mprotect((void*)(addr & 0xFFFFFFFFFFFFF000), len, PROT_READ | PROT_WRITE);
         #endif
     }
+
     void Write(uintptr_t dest, uintptr_t src, size_t size)
     {
         Unprotect(dest, size);
         memcpy((void*)dest, (void*)src, size);
         cacheflush(dest, dest + size, 0);
     }
+
     void Read(uintptr_t src, uintptr_t dest, size_t size)
     {
         Unprotect(src, size); // Do we need it..?
         memcpy((void*)src, (void*)dest, size);
     }
+
     int WriteNOP(uintptr_t addr, size_t count)
     {
         #ifdef __32BIT
         if(THUMBMODE(addr))
         {
             addr = DETHUMB(addr);
-            Unprotect(addr, count * 2);
-            for (uintptr_t p = addr; p != (addr + count * 2); p += 2)
+            int bytesCount = 2 * count;
+            uintptr_t endAddr = addr + bytesCount;
+            Unprotect(addr, bytesCount);
+            for (uintptr_t p = addr; p != endAddr; p += 2)
             {
                 (*(char*)(p + 0)) = 0x00;
                 (*(char*)(p + 1)) = 0xBF;
             }
-            cacheflush(addr, addr + count * 2, 0);
-            return 2 * count;
+            cacheflush(addr, endAddr, 0);
+            return bytesCount;
         }
         else
         {
-            Unprotect(addr, count * 4);
-            for (uintptr_t p = addr; p != (addr + count * 4); p += 4)
+            int bytesCount = 4 * count;
+            uintptr_t endAddr = addr + bytesCount;
+            Unprotect(addr, bytesCount);
+            for (uintptr_t p = addr; p != endAddr; p += 4)
             {
                 (*(char*)(p + 0)) = 0x00;
                 (*(char*)(p + 1)) = 0xF0;
                 (*(char*)(p + 2)) = 0x20;
                 (*(char*)(p + 3)) = 0xE3;
             }
-            cacheflush(addr, addr + count * 4, 0);
-            return 4 * count;
+            cacheflush(addr, endAddr, 0);
+            return bytesCount;
         }
         #elif defined __64BIT
-            Unprotect(addr, count * 4);
-            for (uintptr_t p = addr; p != (addr + count * 4); p += 4)
+            int bytesCount = 4 * count;
+            uintptr_t endAddr = addr + bytesCount;
+            Unprotect(addr, bytesCount);
+            for (uintptr_t p = addr; p != endAddr; p += 4)
             {
                 (*(char*)(p + 0)) = 0x1F;
                 (*(char*)(p + 1)) = 0x20;
                 (*(char*)(p + 2)) = 0x03;
                 (*(char*)(p + 3)) = 0xD5;
             }
-            cacheflush(addr, addr + count * 4, 0);
-            return 4 * count;
+            cacheflush(addr, endAddr, 0);
+            return bytesCount;
         #endif
     }
+
+    int WriteNOP4(uintptr_t addr, size_t count)
+    {
+        int bytesCount = 4 * count;
+        uintptr_t endAddr = addr + bytesCount;
+        #ifdef __32BIT
+        if(THUMBMODE(addr))
+        {
+            addr = DETHUMB(addr);
+            endAddr = DETHUMB(endAddr);
+            Unprotect(addr, bytesCount);
+            for (uintptr_t p = addr; p != endAddr; p += 4)
+            {
+                (*(char*)(p + 0)) = 0xAF;
+                (*(char*)(p + 1)) = 0xF3;
+                (*(char*)(p + 2)) = 0x00;
+                (*(char*)(p + 3)) = 0x80;
+            }
+            cacheflush(addr, endAddr, 0);
+            return bytesCount;
+        }
+        else
+        {
+            Unprotect(addr, count * 4);
+            for (uintptr_t p = addr; p != endAddr; p += 4)
+            {
+                (*(char*)(p + 0)) = 0x00;
+                (*(char*)(p + 1)) = 0xF0;
+                (*(char*)(p + 2)) = 0x20;
+                (*(char*)(p + 3)) = 0xE3;
+            }
+            cacheflush(addr, endAddr, 0);
+            return bytesCount;
+        }
+        #elif defined __64BIT
+            Unprotect(addr, count * 4);
+            for (uintptr_t p = addr; p != endAddr; p += 4)
+            {
+                (*(char*)(p + 0)) = 0x1F;
+                (*(char*)(p + 1)) = 0x20;
+                (*(char*)(p + 2)) = 0x03;
+                (*(char*)(p + 3)) = 0xD5;
+            }
+            cacheflush(addr, endAddr, 0);
+            return bytesCount;
+        #endif
+    }
+
     int WriteB(uintptr_t addr, uintptr_t dest) // B instruction
     {
         #ifdef __32BIT
@@ -250,6 +314,7 @@ namespace ARMPatch
         return 4;
         #endif
     }
+
     void WriteBL(uintptr_t addr, uintptr_t dest) // BL instruction
     {
         #ifdef __32BIT
@@ -261,6 +326,7 @@ namespace ARMPatch
         Write(addr, (uintptr_t)&newDest, sizeof(uint32_t));
         #endif
     }
+
     void WriteBLX(uintptr_t addr, uintptr_t dest) // BLX instruction
     {
         #ifdef __32BIT
@@ -271,6 +337,7 @@ namespace ARMPatch
         __builtin_trap(); // ARMv8 doesnt have that instruction so using it is absurd!
         #endif
     }
+
     int WriteRET(uintptr_t addr)
     {
         #ifdef __32BIT
@@ -289,12 +356,14 @@ namespace ARMPatch
             return 4;
         #endif
     }
+
     void WriteMOV(uintptr_t addr, ARMRegister from, ARMRegister to)
     {
         #ifdef __32BIT
+        uint32_t newDest;
         if(THUMBMODE(addr))
         {
-            uint32_t newDest = (0x01 << 24) | (to << 16) | (from << 12);
+            newDest = (0x01 << 24) | (to << 16) | (from << 12);
         }
         else
         {
@@ -302,16 +371,18 @@ namespace ARMPatch
         }
         Write(addr, (uintptr_t)&newDest, sizeof(uint32_t));
         #elif defined __64BIT
-        uint32_t newDest = 0x0;
-        if(from >= ARM_REG_X0)
+        if((from >= ARM_REG_X0 && to < ARM_REG_X0) || (to >= ARM_REG_X0 && from < ARM_REG_X0)) __builtin_trap();
+        else if(from >= ARM_REG_X0)
         {
-            from -= ARM_REG_X0;
-            to -= ARM_REG_X0;
-            newDest = 0x0;
+            Write(addr, ARMv8::MOVRegBits::CreateMOV(from - ARM_REG_X0, to - ARM_REG_X0, true));
         }
-        Write(addr, (uintptr_t)&newDest, sizeof(uint32_t));
+        else
+        {
+            Write(addr, ARMv8::MOVRegBits::CreateMOV(from, to, false));
+        }
         #endif
     }
+
     int Redirect(uintptr_t addr, uintptr_t to)
     {
         if(!addr || !to) return 0;
@@ -338,19 +409,25 @@ namespace ARMPatch
         return 16;
     #endif
     }
+
     bool hookInternal(void* addr, void* func, void** original)
     {
         if (addr == NULL || func == NULL || addr == func) return false;
-        #ifdef __USEDOBBY
-            return DobbyHook(addr, (dobby_dummy_func_t)func, (dobby_dummy_func_t*)original) == 0;
+        #ifdef __USEGLOSS
+            return GlossHook(addr, func, original) != NULL;
         #else
-            #ifdef __32BIT
-                return MSHookFunction(addr, func, original);
-            #elif defined __64BIT
-                return A64HookFunction(addr, func, original);
+            #ifdef __USEDOBBY
+                return DobbyHook(addr, (dobby_dummy_func_t)func, (dobby_dummy_func_t*)original) == 0;
+            #else
+                #ifdef __32BIT
+                    return MSHookFunction(addr, func, original);
+                #elif defined __64BIT
+                    return A64HookFunction(addr, func, original);
+                #endif
             #endif
         #endif
     }
+
     bool hookPLTInternal(void* addr, void* func, void** original)
     {
         if (addr == NULL || func == NULL || addr == func) return false;
@@ -359,7 +436,7 @@ namespace ARMPatch
         *(uintptr_t*)addr = (uintptr_t)func;
         return true;
     }
-    
+
     static bool CompareData(const uint8_t* data, const bytePattern::byteEntry* pattern, size_t patternlength)
     {
         int index = 0;
@@ -374,6 +451,7 @@ namespace ARMPatch
         }
         return index == patternlength;
     }
+
     uintptr_t GetAddressFromPattern(const char* pattern, const char* soLib)
     {
         bytePattern ret;
@@ -409,6 +487,7 @@ namespace ARMPatch
         }
         return (uintptr_t)0;
     }
+
     uintptr_t GetAddressFromPattern(const char* pattern, uintptr_t libStart, uintptr_t scanLen)
     {
         bytePattern ret;
@@ -442,7 +521,7 @@ namespace ARMPatch
         }
         return (uintptr_t)0;
     }
-    
+
     // xDL part
     bool IsCorrectXDLHandle(void* ptr)
     {
@@ -493,4 +572,7 @@ namespace ARMPatch
         #endif
         return NULL;
     }
+
+    // GlossHook part
+
 }

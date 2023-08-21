@@ -10,3 +10,6 @@
 [submodule "armpatch_src/AML_PrecompiledLibs"]
 	path = armpatch_src/AML_PrecompiledLibs
 	url = https://github.com/RusJJ/AML_PrecompiledLibs
+[submodule "AArchASMHelper"]
+	path = AArchASMHelper
+	url = https://github.com/RusJJ/AArchASMHelper

@@ -10,6 +10,9 @@
 #ifdef __USEDOBBY
     #include "AML_PrecompiledLibs/include/dobby.h"
 #endif
+#ifdef __USEGLOSS
+    #include "AML_PrecompiledLibs/include/Gloss.h"
+#endif
 
 #ifdef __arm__
     #define __32BIT
@@ -28,6 +31,7 @@
     #error This lib is supposed to work on ARM only!
 #endif
 
+#ifndef NO_HOOKDEFINES
 /* Just a hook declaration */
 #define DECL_HOOK(_ret, _name, ...)                             \
     _ret (*_name)(__VA_ARGS__);                                    \
@@ -42,6 +46,7 @@
 /* Just a hook of a function located in PLT section (by address!) */
 #define HOOKPLT(_name, _fnAddr)                                 \
     ARMPatch::HookPLT((void*)(_fnAddr), (void*)(&HookOf_##_name), (void**)(&_name));
+#endif
 
 #define ARMPATCH_VER 1
     
@@ -67,6 +72,8 @@ enum ARMRegister : char
     
     ARM_REG_INVALID
 };
+#include "../AArchASMHelper/ARMv7_ASMHelper.h"
+#include "../AArchASMHelper/Thumbv7_ASMHelper.h"
 #elif defined __64BIT
 enum ARMRegister : char
 {
@@ -90,6 +97,7 @@ enum ARMRegister : char
     
     ARM_REG_INVALID
 };
+#include "../AArchASMHelper/ARMv8_ASMHelper.h"
 #endif
 
 struct bytePattern
@@ -158,6 +166,25 @@ namespace ARMPatch
     {
         Write(dest, (uintptr_t)data, strlen(data));
     }
+    inline void Write(uintptr_t dest, const char* data, size_t size)
+    {
+        Write(dest, (uintptr_t)data, size);
+    }
+    inline void Write(uintptr_t dest, uint32_t data)
+    {
+        uint32_t dataPtr = data;
+        Write(dest, (uintptr_t)&dataPtr, 4);
+    }
+    inline void Write(uintptr_t dest, uint16_t data)
+    {
+        uint16_t dataPtr = data;
+        Write(dest, (uintptr_t)&dataPtr, 2);
+    }
+    inline void Write(uintptr_t dest, uint8_t data)
+    {
+        uint8_t dataPtr = data;
+        Write(dest, (uintptr_t)&dataPtr, 1);
+    }
     
     /*
         Read memory (reprotects it)
@@ -173,6 +200,14 @@ namespace ARMPatch
         count - how much times to put
     */
     int WriteNOP(uintptr_t addr, size_t count = 1);
+    
+    /*
+        Place 4-byte NotOPerator instruction (reprotects it)
+        Similar to WriteNOP but differs for Thumb execution mode
+        addr - where to put
+        count - how much times to put
+    */
+    int WriteNOP4(uintptr_t addr, size_t count = 1);
     
     /*
         Place JUMP instruction (reprotects it)

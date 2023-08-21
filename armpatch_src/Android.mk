@@ -18,8 +18,13 @@ LOCAL_SRC_FILES := AML_PrecompiledLibs/$(TARGET_ARCH_ABI)/libdobby.a
 include $(PREBUILT_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
+LOCAL_MODULE := gloss
+LOCAL_SRC_FILES := AML_PrecompiledLibs/$(TARGET_ARCH_ABI)/libGlossHook.a
+include $(PREBUILT_STATIC_LIBRARY)
+
+include $(CLEAR_VARS)
 LOCAL_CPP_EXTENSION := .cpp .cc
-LOCAL_SHARED_LIBRARIES := substrate dobby
+LOCAL_SHARED_LIBRARIES := substrate dobby gloss
 LOCAL_MODULE    := armpatch
 LOCAL_SRC_FILES := ARMPatch.cpp
 LOCAL_CFLAGS += -O2 -mfloat-abi=softfp -DNDEBUG
