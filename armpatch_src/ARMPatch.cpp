@@ -367,52 +367,63 @@ namespace ARMPatch
         #endif
     }
 
-    #ifdef __USE_GLOSSHOOK
     void* hook_b(void* addr, void* func, void** original)
     {
-        if (addr == NULL || func == NULL || addr == func) return NULL;
-        i_set mode = $ARM64;
-    #ifdef __32BIT
-        if (THUMBMODE(addr)) mode = $THUMB;
-        else mode = $ARM;
-    #endif
-        return GlossHookBranchB(addr, func, original, mode);
+        #ifdef __USE_GLOSSHOOK
+            if (addr == NULL || func == NULL || addr == func) return NULL;
+            i_set mode = $ARM64;
+            #ifdef __32BIT
+                if (THUMBMODE(addr)) mode = $THUMB;
+                else mode = $ARM;
+            #endif
+            return GlossHookBranchB(addr, func, original, mode);
+        #endif
+        return NULL;
+
     }
     void* hook_bl(void* addr, void* func, void** original)
     {
-        if (addr == NULL || func == NULL || addr == func) return NULL;
-        i_set mode = $ARM64;
-    #ifdef __32BIT
-        if (THUMBMODE(addr)) mode = $THUMB;
-        else mode = $ARM;
-    #endif
-        return GlossHookBranchBL(addr, func, original, mode);
+        #ifdef __USE_GLOSSHOOK
+            if (addr == NULL || func == NULL || addr == func) return NULL;
+            i_set mode = $ARM64;
+            #ifdef __32BIT
+                if (THUMBMODE(addr)) mode = $THUMB;
+                else mode = $ARM;
+            #endif
+            return GlossHookBranchBL(addr, func, original, mode);
+        #endif
+        return NULL;
     }
     void* hook_blx(void* addr, void* func, void** original)
     {
-    #ifdef __32BIT
-        if (addr == NULL || func == NULL || addr == func) return NULL;
-        i_set mode = $ARM64;
-        if (THUMBMODE(addr)) mode = $THUMB;
-        else mode = $ARM;
-        return GlossHookBranchBLX(addr, func, original, mode);
-    #elif defined __64BIT
-        __builtin_trap(); // ARMv8 doesnt have that instruction so using it is absurd!
+        #ifdef __USE_GLOSSHOOK
+            if (addr == NULL || func == NULL || addr == func) return NULL;
+            i_set mode = $NONE;
+            #ifdef __32BIT
+                if (THUMBMODE(addr)) mode = $THUMB;
+                else mode = $ARM;
+                return GlossHookBranchBLX(addr, func, original, mode);
+            #elif defined __64BIT
+                __builtin_trap(); // ARMv8 doesnt have that instruction so using it is absurd!
+                return NULL;
+            #endif
+        #endif
         return NULL;
-    #endif
     }
 
     void* hook_patch(void* addr, GlossHookPatchCallback func, bool is_4byte_jump)
     {
-        if (addr == NULL || func == NULL || addr == func) return NULL;
-        i_set mode = $ARM64;
-    #ifdef __32BIT
-        if (THUMBMODE(addr)) mode = $THUMB;
-        else mode = $ARM;
-    #endif
-        return GlossHookPatch(addr, func, is_4byte_jump, mode);
+        #ifdef __USE_GLOSSHOOK
+            if (addr == NULL || func == NULL || addr == func) return NULL;
+            i_set mode = $ARM64;
+            #ifdef __32BIT
+                if (THUMBMODE(addr)) mode = $THUMB;
+                else mode = $ARM;
+            #endif
+            return GlossHookPatch(addr, func, is_4byte_jump, mode);
+        #endif
+        return NULL;
     }
-    #endif
     
     static bool CompareData(const uint8_t* data, const bytePattern::byteEntry* pattern, size_t patternlength)
     {

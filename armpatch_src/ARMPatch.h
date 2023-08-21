@@ -1,3 +1,5 @@
+#ifndef __ARMPatch__
+#define __ARMPatch__
 #include <unistd.h>
 #include <vector>
 #include <dlfcn.h>
@@ -267,12 +269,10 @@ namespace ARMPatch
         return hookPLTInternal((void*)addr, (void*)func, (void**)NULL);
     }
     
-#ifdef __USE_GLOSSHOOK
     void* hook_b(void* addr, void* func, void** original);
     void* hook_bl(void* addr, void* func, void** original);
     void* hook_blx(void* addr, void* func, void** original);
     void* hook_patch(void* addr, GlossHookPatchCallback func, bool is_4byte_jump);
-#endif
     
     // xDL part
     bool IsCorrectXDLHandle(void* ptr);
@@ -281,3 +281,5 @@ namespace ARMPatch
     size_t GetSymSizeXDL(uintptr_t addr);
     const char* GetSymNameXDL(uintptr_t addr);
 }
+
+#endif
