@@ -281,8 +281,8 @@ namespace ARMPatch
             calc -= 2; // PC
             if(calc <= 255)
             {
-                unsigned char code[2] = { (unsigned char)calc, 0xE0 };
-                Write(DETHUMB(addr), (uintptr_t)&code, 2);
+                uint16_t newDest = 0xE000 | (calc & 0x7FF);
+                Write(DETHUMB(addr), newDest);
                 return 2;
             }
             else
