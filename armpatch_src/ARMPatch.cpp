@@ -311,7 +311,7 @@ namespace ARMPatch
         #endif
     }
 
-    void WriteBL(uintptr_t addr, uintptr_t dest) // BL instruction
+    void WriteBL(uintptr_t addr, uintptr_t dest) // BL instruction (max. is ~0x400000 in both directions)
     {
         #ifdef __32BIT
         uint32_t newDest = ((dest - addr - 4) >> 12) & 0x7FF | 0xF000 |
@@ -323,7 +323,7 @@ namespace ARMPatch
         #endif
     }
 
-    void WriteBLX(uintptr_t addr, uintptr_t dest) // BLX instruction
+    void WriteBLX(uintptr_t addr, uintptr_t dest) // BLX instruction (max. is ~0x400000 in both directions)
     {
         #ifdef __32BIT
         uint32_t newDest = ((dest - addr - 4) >> 12) & 0x7FF | 0xF000 |
