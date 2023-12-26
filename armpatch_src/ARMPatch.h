@@ -16,9 +16,9 @@
 
 #ifdef __arm__
     #define __32BIT
-    #define DETHUMB(_a) ((uintptr_t)_a & ~0x1)
-    #define RETHUMB(_a) ((uintptr_t)_a | 0x1)
-    #define THUMBMODE(_a) (((uintptr_t)_a & 0x1)||((uintptr_t)_a & 0x2)||ARMPatch::bThumbMode||(ARMPatch::GetAddrBaseXDL((uintptr_t)_a) & 0x1))
+    #define DETHUMB(_a) (((uintptr_t)_a) & ~0x1)
+    #define RETHUMB(_a) (((uintptr_t)_a) | 0x1)
+    #define THUMBMODE(_a) ((((uintptr_t)_a) & 0x1)||(((uintptr_t)_a) & 0x2)||ARMPatch::bThumbMode||(ARMPatch::GetAddrBaseXDL((uintptr_t)_a) & 0x1))
     extern "C" bool MSHookFunction(void* symbol, void* replace, void** result);
 #elif defined __aarch64__
     #define __64BIT
@@ -32,23 +32,26 @@
 #endif
 
 #ifndef NO_HOOKDEFINES
-/* Just a hook declaration */
-#define DECL_HOOK(_ret, _name, ...)                             \
-    _ret (*_name)(__VA_ARGS__);                                    \
-    _ret HookOf_##_name(__VA_ARGS__)
-/* Just a hook declaration with return type = void */
-#define DECL_HOOKv(_name, ...)                                  \
-    void (*_name)(__VA_ARGS__);                                    \
-    void HookOf_##_name(__VA_ARGS__)
-/* Just a hook of a function */
-#define HOOK(_name, _fnAddr)                                    \
-    ARMPatch::Hook((void*)(_fnAddr), (void*)(&HookOf_##_name), (void**)(&_name));
-/* Just a hook of a function located in PLT section (by address!) */
-#define HOOKPLT(_name, _fnAddr)                                 \
-    ARMPatch::HookPLT((void*)(_fnAddr), (void*)(&HookOf_##_name), (void**)(&_name));
+    /* Just a hook declaration */
+    #define DECL_HOOK(_ret, _name, ...)                             \
+        _ret (*_name)(__VA_ARGS__);                                 \
+        _ret HookOf_##_name(__VA_ARGS__)
+    /* Just a hook declaration with return type = void */
+    #define DECL_HOOKv(_name, ...)                                  \
+        void (*_name)(__VA_ARGS__);                                 \
+        void HookOf_##_name(__VA_ARGS__)
+    /* Just a hook of a function */
+    #define HOOK(_name, _fnAddr)                                    \
+        ARMPatch::Hook((void*)(_fnAddr), (void*)(&HookOf_##_name), (void**)(&_name));
+    /* Just a hook of a function (but simpler usage) */
+    #define HOOKSYM(_name, _libHndl, _fnSym)                        \
+        ARMPatch::Hook((void*)(ARMPatch::GetSym(_libHndl, _fnSym)), (void*)(&HookOf_##_name), (void**)(&_name));
+    /* Just a hook of a function located in PLT section (by address!) */
+    #define HOOKPLT(_name, _fnAddr)                                 \
+        ARMPatch::HookPLT((void*)(_fnAddr), (void*)(&HookOf_##_name), (void**)(&_name));
 #endif
 
-#define ARMPATCH_VER 1
+#define ARMPATCH_VER 2
     
 #ifdef __32BIT
 enum ARMRegister : char
@@ -284,6 +287,12 @@ namespace ARMPatch
     bool HookPLT(A addr, B func) { return hookPLTInternal((void*)addr, (void*)func, (void**)NULL); }
     template<class A, class B, class C>
     bool HookPLT(A addr, B func, C original) { return hookPLTInternal((void*)addr, (void*)func, (void**)original); }
+    
+    /*
+        If it`s a thumb code? A simple ass check
+        addr - what to check?
+    */
+    bool IsThumbAddr(uintptr_t addr);
     
     // xDL part
     bool IsCorrectXDLHandle(void* ptr);

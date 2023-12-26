@@ -355,7 +355,7 @@ namespace ARMPatch
 
     void WriteMOV(uintptr_t addr, ARMRegister from, ARMRegister to)
     {
-        #ifdef __32BIT
+    #ifdef __32BIT
         uint32_t newDest;
         if(THUMBMODE(addr))
         {
@@ -366,8 +366,8 @@ namespace ARMPatch
             
         }
         Write(addr, (uintptr_t)&newDest, sizeof(uint32_t));
-        #elif defined __64BIT
-        if((from >= ARM_REG_X0 && to < ARM_REG_X0) || (to >= ARM_REG_X0 && from < ARM_REG_X0)) __builtin_trap();
+    #elif defined __64BIT
+        if((from >= ARM_REG_X0 && to < ARM_REG_X0) || (to >= ARM_REG_X0 && from < ARM_REG_X0)) return; //__builtin_trap();
         else if(from >= ARM_REG_X0)
         {
             Write(addr, ARMv8::MOVRegBits::CreateMOV(from - ARM_REG_X0, to - ARM_REG_X0, true));
@@ -376,7 +376,7 @@ namespace ARMPatch
         {
             Write(addr, ARMv8::MOVRegBits::CreateMOV(from, to, false));
         }
-        #endif
+    #endif
     }
 
     int Redirect(uintptr_t addr, uintptr_t to)
@@ -409,25 +409,24 @@ namespace ARMPatch
     bool hookInternal(void* addr, void* func, void** original)
     {
         if (addr == NULL || func == NULL || addr == func) return false;
-        #ifdef __USEGLOSS
+        #if defined(__USEGLOSS)
             return GlossHook(addr, func, original) != NULL;
+        #elif defined(__USEDOBBY)
+            return DobbyHook(addr, (dobby_dummy_func_t)func, (dobby_dummy_func_t*)original) == 0;
         #else
-            #ifdef __USEDOBBY
-                return DobbyHook(addr, (dobby_dummy_func_t)func, (dobby_dummy_func_t*)original) == 0;
-            #else
-                #ifdef __32BIT
-                    return MSHookFunction(addr, func, original);
-                #elif defined __64BIT
-                    return A64HookFunction(addr, func, original);
-                #endif
+            #ifdef __32BIT
+                return MSHookFunction(addr, func, original);
+            #elif defined __64BIT
+                return A64HookFunction(addr, func, original);
             #endif
         #endif
     }
 
     bool hookPLTInternal(void* addr, void* func, void** original)
     {
-        if (addr == NULL || func == NULL || addr == func) return false;
-        if(Unprotect((uintptr_t)addr, 8) != 0) return false;
+        if (addr == NULL || func == NULL || addr == func ||
+            (original != NULL && *original == func)) return false;
+        if(Unprotect((uintptr_t)addr, sizeof(uintptr_t)) != 0) return false;
         if(original != NULL) *((uintptr_t*)original) = *(uintptr_t*)addr;
         *(uintptr_t*)addr = (uintptr_t)func;
         return true;
@@ -518,54 +517,59 @@ namespace ARMPatch
         return (uintptr_t)0;
     }
 
+    bool IsThumbAddr(uintptr_t addr)
+    {
+        return THUMBMODE(addr);
+    }
+
     // xDL part
     bool IsCorrectXDLHandle(void* ptr)
     {
-        #ifdef __XDL
+      #ifdef __XDL
         return xdl_is_cached(ptr);
-        #endif
+      #endif
         return false;
     }
     uintptr_t GetLibXDL(void* ptr)
     {
-        #ifdef __XDL
+      #ifdef __XDL
         xdl_info_t info;
         if (xdl_info(ptr, XDL_DI_DLINFO, &info) == -1) return 0;
         return (uintptr_t)info.dli_fbase;
-        #endif
+      #endif
         return 0;
     }
     uintptr_t GetAddrBaseXDL(uintptr_t addr)
     {
-        #ifdef __XDL
+      #ifdef __XDL
         xdl_info_t info;
         void* cache = NULL;
         if(!xdl_addr((void*)addr, &info, &cache)) return 0;
         xdl_addr_clean(&cache);
         return (uintptr_t)info.dli_saddr;
-        #endif
+      #endif
         return 0;
     }
     size_t GetSymSizeXDL(void* ptr)
     {
-        #ifdef __XDL
+      #ifdef __XDL
         xdl_info_t info;
         void* cache = NULL;
         if(!xdl_addr(ptr, &info, &cache)) return 0;
         xdl_addr_clean(&cache);
         return info.dli_ssize;
-        #endif
+      #endif
         return 0;
     }
     const char* GetSymNameXDL(void* ptr)
     {
-        #ifdef __XDL
+      #ifdef __XDL
         xdl_info_t info;
         void* cache = NULL;
         if(!xdl_addr(ptr, &info, &cache)) return NULL;
         xdl_addr_clean(&cache);
         return info.dli_sname;
-        #endif
+      #endif
         return NULL;
     }
 
