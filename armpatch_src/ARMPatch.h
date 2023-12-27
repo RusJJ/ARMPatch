@@ -301,7 +301,7 @@ namespace ARMPatch
     size_t GetSymSizeXDL(void* ptr);
     const char* GetSymNameXDL(void* ptr);
     
-    // GlossHook part
+    // GlossHook part START
 
     /*
         A branch hook
@@ -326,4 +326,12 @@ namespace ARMPatch
     bool HookBLX(A addr, B func) { return hookBranchLinkXInternal((void*)addr, (void*)func, (void**)NULL); }
     template<class A, class B, class C>
     bool HookBLX(A addr, B func, C original) { return hookBranchLinkXInternal((void*)addr, (void*)func, (void**)original); }
+
+    /*
+        Get the address BRANCH refers to
+        addr - what to check?
+    */
+    uintptr_t GetBranchDest(uintptr_t addr);
+
+    // GlossHook part END
 }
