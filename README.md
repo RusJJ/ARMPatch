@@ -1,7 +1,7 @@
 ### An example of usage
 ```sh
 ...
-DECL_HOOKv(LibFuncAtABC123) // "DECL_HOOKv(" may be replaced by "DECL_HOOK(void,"
+DECL_HOOKv(LibFuncAtABC123) // "DECL_HOOK(void,..." is replaced by "DECL_HOOKv(..."
 {
 	__android_log_print(ANDROID_LOG_INFO, "HOOKED!", "HOOKED()");
 	LibFuncAtABC123(); // Call original function (thanks Cydia and Rprop!)

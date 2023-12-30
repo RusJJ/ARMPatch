@@ -37,15 +37,15 @@ namespace ARMPatch
         return 0;
     }
 
-    const char* GetPatchVer()
+    const char* GetPatchVerStr()
     {
         #define STRSTRSECPASS(_AA) #_AA
         #define STRSTRMACRO(_AA) STRSTRSECPASS(_AA)
         
         #ifdef __32BIT
-        return "ARMPatch v." STRSTRMACRO(ARMPATCH_VER) " (32-bit) (compiled " __DATE__ " " __TIME__ ")";
+            return "ARMPatch v." STRSTRMACRO(ARMPATCH_VER) " (32-bit) (compiled " __DATE__ " " __TIME__ ")";
         #elif defined __64BIT
-        return "ARMPatch v." STRSTRMACRO(ARMPATCH_VER) " (64-bit) (compiled " __DATE__ " " __TIME__ ")";
+            return "ARMPatch v." STRSTRMACRO(ARMPATCH_VER) " (64-bit) (compiled " __DATE__ " " __TIME__ ")";
         #endif
     }
 
@@ -75,9 +75,9 @@ namespace ARMPatch
     void* GetLibHandle(const char* soLib)
     {
         #ifdef __XDL
-        return xdl_cache(xdl_open(soLib, XDL_DEFAULT));
+            return xdl_cache(xdl_open(soLib, XDL_DEFAULT));
         #else
-        return dlopen(soLib, RTLD_LAZY);
+            return dlopen(soLib, RTLD_LAZY);
         #endif
     }
 
@@ -85,11 +85,11 @@ namespace ARMPatch
     {
         __iter_dlName = NULL;
         #ifdef __XDL
-        xdl_iterate_phdr(__iter_callback, (void*)addr, XDL_DEFAULT);
-        return xdl_cache(xdl_open(__iter_dlName, XDL_DEFAULT));
+            xdl_iterate_phdr(__iter_callback, (void*)addr, XDL_DEFAULT);
+            return xdl_cache(xdl_open(__iter_dlName, XDL_DEFAULT));
         #else
-        dl_iterate_phdr(__iter_callback, (void*)addr);
-        return dlopen(__iter_dlName, RTLD_LAZY);
+            dl_iterate_phdr(__iter_callback, (void*)addr);
+            return dlopen(__iter_dlName, RTLD_LAZY);
         #endif
     }
 
@@ -133,13 +133,13 @@ namespace ARMPatch
     {
         __iter_dlName = NULL;
         #ifdef __XDL
-        xdl_iterate_phdr(__iter_callback, (void*)libAddr, XDL_DEFAULT);
-        void* handle = xdl_cache(xdl_open(__iter_dlName, XDL_DEFAULT));
-        return (uintptr_t)xdl_sym(handle, sym, NULL);
+            xdl_iterate_phdr(__iter_callback, (void*)libAddr, XDL_DEFAULT);
+            void* handle = xdl_cache(xdl_open(__iter_dlName, XDL_DEFAULT));
+            return (uintptr_t)xdl_sym(handle, sym, NULL);
         #else
-        dl_iterate_phdr(__iter_callback, (void*)libAddr);
-        void* handle = dlopen(__iter_dlName, RTLD_LAZY);
-        return (uintptr_t)dlsym(handle, sym);
+            dl_iterate_phdr(__iter_callback, (void*)libAddr);
+            void* handle = dlopen(__iter_dlName, RTLD_LAZY);
+            return (uintptr_t)dlsym(handle, sym);
         #endif
     }
 
@@ -304,33 +304,63 @@ namespace ARMPatch
             return 4;
         }
         #elif defined __64BIT
-        // Probably, the range is [-0xFFFFFF, 0xFFFFFFF]
-        uint32_t newDest = 0x14000000 | (((dest - addr) >> 2) & 0x03FFFFFF);
-        Write(addr, (uintptr_t)&newDest, sizeof(uint32_t));
-        return 4;
+            // Probably, the range is [-0xFFFFFF, 0xFFFFFFF]
+            uint32_t newDest = 0x14000000 | (((dest - addr) >> 2) & 0x03FFFFFF);
+            Write(addr, (uintptr_t)&newDest, sizeof(uint32_t));
+            return 4;
         #endif
     }
 
     void WriteBL(uintptr_t addr, uintptr_t dest) // BL instruction (max. is ~0x400000 in both directions)
     {
-        #ifdef __32BIT
-        uint32_t newDest = ((dest - addr - 4) >> 12) & 0x7FF | 0xF000 |
-                           ((((dest - addr - 4) >> 1) & 0x7FF | 0xF800) << 16);
-        Write(addr, (uintptr_t)&newDest, sizeof(uintptr_t));
-        #elif defined __64BIT
-        uint32_t newDest = 0x94000000 | (((dest - addr) >> 2) & 0x03FFFFFF);
-        Write(addr, (uintptr_t)&newDest, sizeof(uint32_t));
+        #if defined(__USEGLOSS)
+            #ifdef __32BIT
+                if(THUMBMODE(addr))
+                {
+                    if(!Gloss::Inst::MakeThumbBL(addr, dest)) Gloss::Inst::MakeThumbBL_W(addr, dest);
+                }
+                else
+                {
+                    Gloss::Inst::MakeArmBL(addr, dest);
+                }
+            #elif defined __64BIT
+                Gloss::Inst::MakeArm64BL(addr, dest);
+            #endif
+        #else
+            #ifdef __32BIT
+                uint32_t newDest = ((dest - addr - 4) >> 12) & 0x7FF | 0xF000 |
+                                ((((dest - addr - 4) >> 1) & 0x7FF | 0xF800) << 16);
+                Write(addr, (uintptr_t)&newDest, sizeof(uintptr_t));
+            #elif defined __64BIT
+                uint32_t newDest = 0x94000000 | (((dest - addr) >> 2) & 0x03FFFFFF);
+                Write(addr, (uintptr_t)&newDest, sizeof(uint32_t));
+            #endif
         #endif
     }
 
     void WriteBLX(uintptr_t addr, uintptr_t dest) // BLX instruction (max. is ~0x400000 in both directions)
     {
-        #ifdef __32BIT
-        uint32_t newDest = ((dest - addr - 4) >> 12) & 0x7FF | 0xF000 |
-                           ((((dest - addr - 4) >> 1) & 0x7FF | 0xE800) << 16);
-        Write(addr, (uintptr_t)&newDest, sizeof(uint32_t));
-        #elif defined __64BIT
-        __builtin_trap(); // ARMv8 doesnt have that instruction so using it is absurd!
+        #if defined(__USEGLOSS)
+            #ifdef __32BIT
+                if(THUMBMODE(addr))
+                {
+                    if(!Gloss::Inst::MakeThumbBLX(addr, dest)) Gloss::Inst::MakeThumbBLX_W(addr, dest);
+                }
+                else
+                {
+                    Gloss::Inst::MakeArmBLX(addr, dest);
+                }
+            #elif defined __64BIT
+                __builtin_trap(); // ARMv8 doesnt have that instruction so using it is absurd!
+            #endif
+        #else
+            #ifdef __32BIT
+                uint32_t newDest = ((dest - addr - 4) >> 12) & 0x7FF | 0xF000 |
+                                ((((dest - addr - 4) >> 1) & 0x7FF | 0xE800) << 16);
+                Write(addr, (uintptr_t)&newDest, sizeof(uint32_t));
+            #elif defined __64BIT
+                __builtin_trap(); // ARMv8 doesnt have that instruction so using it is absurd!
+            #endif
         #endif
     }
 
@@ -626,8 +656,9 @@ namespace ARMPatch
     {
         #ifdef __USEGLOSS
             #ifdef __32BIT
-                if(IsThumbAddr(addr))
+                if(THUMBMODE(addr))
                 {
+                    //addr &= ~0x1;
                     switch(Gloss::Inst::GetBranch(addr, $THUMB))
                     {
                         case Gloss::Inst::branchs::B_COND16:

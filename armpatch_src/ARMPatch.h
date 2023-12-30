@@ -116,7 +116,7 @@ struct bytePattern
 namespace ARMPatch
 {
     extern bool bThumbMode;
-    const char* GetPatchVer();
+    const char* GetPatchVerStr();
     int GetPatchVerInt();
     /*
         Get library's start address
