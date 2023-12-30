@@ -658,7 +658,7 @@ namespace ARMPatch
             #ifdef __32BIT
                 if(THUMBMODE(addr))
                 {
-                    //addr &= ~0x1;
+                    addr &= ~0x1;
                     switch(Gloss::Inst::GetBranch(addr, $THUMB))
                     {
                         case Gloss::Inst::branchs::B_COND16:
