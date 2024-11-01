@@ -61,7 +61,7 @@ namespace ARMPatch
         {
             while (fgets(buffer, sizeof(buffer)-1, fp))
             {
-                if ( strstr( buffer, soLib ) )
+                if ( strstr( buffer, soLib ) && strstr( buffer, "00000000" ) ) // fix android 9.0+ arm64 some sys library
                 {
                     address = (uintptr_t)strtoul( buffer, NULL, 16 );
                     break;
