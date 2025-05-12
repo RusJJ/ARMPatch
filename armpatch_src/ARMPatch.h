@@ -145,7 +145,7 @@ namespace ARMPatch
         Close library's handle
         handle - HANDLE (NOTICE THIS!!!) of a library (u can obtain it using dlopen)
     */
-    void CloseLibHandle(void* handle)
+    void CloseLibHandle(void* handle);
     /*
         Get library's end address
         soLib - name of a loaded library
@@ -244,7 +244,7 @@ namespace ARMPatch
         to - dest register
         is_t16 - thumb16 mov
     */
-    void WriteMOV(uintptr_t addr, register from, ARMRegister to, bool is_t16 = false);
+    void WriteMOV(uintptr_t addr, ARMRegister from, ARMRegister to, bool is_t16 = false);
     
     /*
         Place absolute jump instruction (moves directly to the function with the same stack!)
@@ -299,15 +299,12 @@ namespace ARMPatch
         If it`s a thumb code? A simple ass check
         addr - what to check?
     */
-    inline bool IsThumbAddr(uintptr_t addr)
-    {
-        return THUMBMODE(addr);
-    }
+    bool IsThumbAddr(uintptr_t addr);
     
     // xDL part
     uintptr_t GetLibXDL(void* handle);
-    uintptr_t GetSymAddrXDL(uintptr_t libaddr)
-    size_t GetSymSizeXDL(uintptr_t libaddr)
+    uintptr_t GetSymAddrXDL(uintptr_t libaddr);
+    size_t GetSymSizeXDL(uintptr_t libaddr);
     const char* GetSymNameXDL(uintptr_t libaddr);
     
     // GlossHook part START
@@ -353,7 +350,7 @@ namespace ARMPatch
         soLib - library's name
         section - section's name (default: ".text")
     */
-    uintptr_t GetAddressFromPattern(const char* pattern, const char* soLib, const char* section)
+    uintptr_t GetAddressFromPattern(const char* pattern, const char* soLib, const char* section);
 
     /*
         A branch hook (BL BLX)

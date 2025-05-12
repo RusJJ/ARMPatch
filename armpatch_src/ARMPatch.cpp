@@ -77,6 +77,7 @@ namespace ARMPatch
             xdl_close(handle);
         #else
             dlclose(handle);
+        #endif
     }
 
     uintptr_t GetLibLength(const char* soLib)
@@ -317,10 +318,10 @@ namespace ARMPatch
         if(!addr || !to) return 0;
         #if defined(__USEGLOSS)
             #ifdef __32BIT
-                i_set mode = $ARM;
-                if (THUMBMODE(addr)) mode = $THUMB;
+                i_set mode = I_ARM;
+                if (THUMBMODE(addr)) mode = I_THUMB;
             #else
-                i_set mode = $ARM64;
+                i_set mode = I_ARM64;
             #endif
             void* ret = GlossHookRedirect(reinterpret_cast<void*>(addr), reinterpret_cast<void*>(to), _4byte, mode);
             size_t len = 0;
@@ -357,10 +358,10 @@ namespace ARMPatch
         if (addr == nullptr || func == nullptr || addr == func) return false;
         #if defined(__USEGLOSS)
             #ifdef __32BIT
-                i_set mode = $ARM;
-                if (THUMBMODE(addr)) mode = $THUMB;
+                i_set mode = I_ARM;
+                if (THUMBMODE(addr)) mode = I_THUMB;
             #else
-                i_set mode = $ARM64;
+                i_set mode = I_ARM64;
             #endif
             if (_4byte) 
                 return GlossHookAddr(addr, func, original, _4byte, mode) != nullptr;
@@ -392,7 +393,7 @@ namespace ARMPatch
 
     static bool CompareData(const uint8_t* data, const bytePattern::byteEntry* pattern, size_t patternlength)
     {
-        int index = 0;
+        uint32_t index = 0;
         for (size_t i = 0; i < patternlength; i++)
         {
             auto byte = *pattern;
@@ -494,6 +495,11 @@ namespace ARMPatch
         }
         return 0;
     }
+    
+    bool IsThumbAddr(uintptr_t addr)
+    {
+        return THUMBMODE(addr);
+    }
 
     // xDL part
     uintptr_t GetLibXDL(void* handle)
@@ -583,9 +589,9 @@ namespace ARMPatch
             #ifdef __32BIT
                 if(THUMBMODE(addr))
                 {
-                    if (is_with)
+                    if (is_width)
                     {
-                        Gloss::Inst::MakeThumbBL_W(addr, dest)) 
+                        Gloss::Inst::MakeThumbBL_W(addr, dest);
                     }
                     else
                     {
@@ -608,7 +614,7 @@ namespace ARMPatch
             #ifdef __32BIT
                 if(THUMBMODE(addr))
                 {
-                    if (is_with)
+                    if (is_width)
                     {
                         Gloss::Inst::MakeThumbBLX_W(addr, dest);
                     }
@@ -641,7 +647,7 @@ namespace ARMPatch
         #if defined(__USEGLOSS)
             if (pattern == nullptr || soLib == nullptr) return 0;
             size_t sec_size = 0;
-            uinptr_t sec_addr = GlossGetLibSection(soLib, section, &sec_size);
+            uintptr_t sec_addr = GlossGetLibSection(soLib, section, &sec_size);
             if (sec_addr != 0)
                 return GetAddressFromPattern(pattern, sec_addr, sec_size);
         #endif
@@ -653,10 +659,10 @@ namespace ARMPatch
         #ifdef __USEGLOSS
             if (addr == nullptr || func == nullptr || addr == func) return false;
             #ifdef __32BIT
-                i_set mode = $ARM;
-                if (THUMBMODE(addr)) mode = $THUMB;
+                i_set mode = I_ARM;
+                if (THUMBMODE(addr)) mode = I_THUMB;
             #else
-                i_set mode = $ARM64;
+                i_set mode = I_ARM64;
             #endif
             return GlossHookBranchBL(addr, func, original, mode) != nullptr;
         #else
@@ -669,8 +675,8 @@ namespace ARMPatch
         #ifdef __USEGLOSS
             if (addr == nullptr || func == nullptr || addr == func) return false;
             #ifdef __32BIT
-                if (THUMBMODE(addr)) return GlossHookBranchBLX(addr, func, original, $THUMB) != nullptr;
-                else return GlossHookBranchBLX(addr, func, original, $ARM) != nullptr;
+                if (THUMBMODE(addr)) return GlossHookBranchBLX(addr, func, original, I_THUMB) != nullptr;
+                else return GlossHookBranchBLX(addr, func, original, I_ARM) != nullptr;
             #else
                 __builtin_trap();
             #endif
@@ -686,16 +692,16 @@ namespace ARMPatch
                 if(THUMBMODE(addr))
                 {
                     addr &= ~0x1;
-                    switch(Gloss::Inst::GetBranch(addr, $THUMB))
+                    switch(Gloss::Inst::GetBranch(addr, I_THUMB))
                     {
-                        case Gloss::Inst::branchs::B_COND16:
-                        case Gloss::Inst::branchs::B_16:
+                        case Gloss::Inst::Branchs::B_COND16:
+                        case Gloss::Inst::Branchs::B_16:
                             return (uintptr_t)Gloss::Inst::GetThumb16BranchDestination(addr);
 
-                        case Gloss::Inst::branchs::B_COND:
-                        case Gloss::Inst::branchs::B:
-                        case Gloss::Inst::branchs::BL:
-                        case Gloss::Inst::branchs::BLX:
+                        case Gloss::Inst::Branchs::B_COND:
+                        case Gloss::Inst::Branchs::B:
+                        case Gloss::Inst::Branchs::BL:
+                        case Gloss::Inst::Branchs::BLX:
                             return (uintptr_t)Gloss::Inst::GetThumb32BranchDestination(addr);
 
                         default:
