@@ -59,6 +59,8 @@
             addr_list = nullptr;                                                \
         } while (0)
 #endif
+
+#define ARMPATCH_VER 3
     
 #ifdef __32BIT
 enum ARMRegister : char

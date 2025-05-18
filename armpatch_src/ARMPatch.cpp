@@ -4,8 +4,6 @@
 #include <link.h>
 #include <elf.h>
 
-#define ARMPATCH_VER 3
-
 namespace ARMPatch
 {
     bool bThumbMode = false;
@@ -277,30 +275,29 @@ namespace ARMPatch
             return 4;
         #endif
     }
-
+    
     void WriteMOV(uintptr_t addr, ARMRegister from, ARMRegister to, bool is_t16)
     {
     #ifdef __32BIT
-        uint32_t newDest;
         if(THUMBMODE(addr))
         {
             if (is_t16)
             {
-                // TODO
-                return;
+                // TODO thumb 2
             }
             else
             {
-                newDest = (0x01 << 24) | (to << 16) | (from << 12);
+                addr = DETHUMB(addr);
+                uint32_t newDest = (0x01 << 24) | (to << 16) | (from << 12);
                 Write(addr, (uintptr_t)&newDest, sizeof(uint32_t));
             }
         }
         else
         {
-            // arm TODO
-            return;
+            // TODO arm
         }
     #elif defined __64BIT
+        (void)is_t16;
         if((from >= ARM_REG_X0 && to < ARM_REG_X0) || (to >= ARM_REG_X0 && from < ARM_REG_X0)) return; //__builtin_trap();
         else if(from >= ARM_REG_X0)
         {
@@ -325,9 +322,10 @@ namespace ARMPatch
             #endif
             void* ret = GlossHookRedirect(reinterpret_cast<void*>(addr), reinterpret_cast<void*>(to), _4byte, mode);
             size_t len = 0;
-            GlossHookGetBackupsBuffer(ret, &len);
+            GlossHookGetBackupsInst(ret, &len);
             return len;
         #else
+            (void)_4byte;
             #ifdef __32BIT
                 uint32_t hook[2] = {0xE51FF004, to};
                 int ret = 8;
@@ -368,8 +366,10 @@ namespace ARMPatch
             else
                 return GlossHook(addr, func, original) != nullptr;
         #elif defined(__USEDOBBY)
+            (void)_4byte;
             return DobbyHook(addr, (dobby_dummy_func_t)func, (dobby_dummy_func_t*)original) == 0;
         #else
+            (void)_4byte;
             #ifdef __32BIT
                 return MSHookFunction(addr, func, original);
             #elif defined __64BIT
@@ -577,6 +577,7 @@ namespace ARMPatch
                     return 4;
                 }
             #elif defined __64BIT
+                (void)is_t16;
                 Gloss::Inst::MakeArm64B(addr, dest);
                 return 4;
             #endif
@@ -603,6 +604,7 @@ namespace ARMPatch
                     Gloss::Inst::MakeArmBL(addr, dest);
                 }
             #elif defined __64BIT
+                (void)is_width;
                 Gloss::Inst::MakeArm64BL(addr, dest);
             #endif
         #endif

@@ -2,7 +2,7 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := substrate
-LOCAL_CPPFLAGS += -g0 -O2 -Wall -Wextra #-Werror \
+LOCAL_CPPFLAGS += -g0 -O2 -Wall -Wextra -Werror \
 -std=c++17 -DNDEBUG -fpic \
 -fdata-sections -ffunction-sections -fvisibility=hidden \
 -fstack-protector -fomit-frame-pointer -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables
@@ -31,11 +31,11 @@ LOCAL_CPP_EXTENSION := .cpp .cc
 LOCAL_SHARED_LIBRARIES := substrate gloss #dobby
 LOCAL_MODULE    := armpatch
 LOCAL_SRC_FILES := ARMPatch.cpp
-LOCAL_CFLAGS += -g0 -O2 -Wall -Wextra #-Werror \
+LOCAL_CFLAGS += -g0 -O2 -Wall -Wextra -Werror \
 -std=c17 -DNDEBUG -fpic \
 -fstack-protector -fdata-sections -ffunction-sections -fvisibility=hidden \
 -fomit-frame-pointer -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables
-LOCAL_CPPFLAGS += -g0 -O2 -Wall -Wextra #-Werror \
+LOCAL_CPPFLAGS += -g0 -O2 -Wall -Wextra -Werror \
 -std=c++17 -DNDEBUG -fpic \
 -fstack-protector -fdata-sections -ffunction-sections -fvisibility=hidden \
 -fomit-frame-pointer -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables
