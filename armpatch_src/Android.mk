@@ -2,13 +2,16 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := substrate
-LOCAL_CFLAGS := -O2 -mfloat-abi=softfp
+LOCAL_CPPFLAGS += -g0 -O2 -Wall -Wextra -std=c++17 -DNDEBUG \
+-fdata-sections -ffunction-sections -fvisibility=hidden -fstack-protector -fomit-frame-pointer
 ifeq ($(TARGET_ARCH_ABI), armeabi-v7a)
     LOCAL_SRC_FILES := substrate/Hooker.cpp substrate/Debug.cpp substrate/PosixMemory.cpp # Cydia Substrate
+    LOCAL_CPPFLAGS += -mfloat-abi=softfp -mthumb
+else ifeq ($(TARGET_ARCH_ABI), arm64-v8a)
+    LOCAL_SRC_FILES := And64InlineHook/And64InlineHook.cpp # And64InlineHook
+    LOCAL_LDFLAGS += -Wl,-z,max-page-size=16384
 else
-    ifeq ($(TARGET_ARCH_ABI), arm64-v8a)
-        LOCAL_SRC_FILES := And64InlineHook/And64InlineHook.cpp # And64InlineHook
-    endif
+    $(error Unknown arch, only support armeabi-v7a and arm64-v8a)
 endif
 include $(BUILD_STATIC_LIBRARY)
 
@@ -27,8 +30,19 @@ LOCAL_CPP_EXTENSION := .cpp .cc
 LOCAL_SHARED_LIBRARIES := substrate gloss #dobby
 LOCAL_MODULE    := armpatch
 LOCAL_SRC_FILES := ARMPatch.cpp
-LOCAL_CFLAGS += -O2 -mfloat-abi=softfp -DNDEBUG
-LOCAL_LDLIBS += -llog # ARM64 library requires for shared library (because that substrate was made with logs support)
+LOCAL_CFLAGS += -g0 -O2 -Wall -Wextra -Werror -std=c17 -DNDEBUG \
+-fstack-protector -fdata-sections -ffunction-sections -fvisibility=hidden -fomit-frame-pointer
+LOCAL_CPPFLAGS += -g0 -O2 -Wall -Wextra -Werror -std=c++17 -DNDEBUG \
+-fstack-protector -fdata-sections -ffunction-sections -fvisibility=hidden -fomit-frame-pointer
+ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
+    LOCAL_LDFLAGS += -Wl,-z,max-page-size=16384
+else ifeq ($(TARGET_ARCH_ABI), armeabi-v7a)
+    LOCAL_CFLAGS += -mfloat-abi=softfp -mthumb
+    LOCAL_CPPFLAGS += -mfloat-abi=softfp -mthumb
+else
+    $(error Unknown arch, only support armeabi-v7a and arm64-v8a)
+endif
+LOCAL_LDLIBS += -landroid -llog -ldl
 
  ## xDL ##
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/xDL/xdl/src/main/cpp $(LOCAL_PATH)/xDL/xdl/src/main/cpp/include
