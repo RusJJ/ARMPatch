@@ -2,10 +2,8 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := substrate
-LOCAL_CPPFLAGS += -g0 -O2 -Wall -Wextra -Werror \
--std=c++17 -DNDEBUG -fpic \
--fdata-sections -ffunction-sections -fvisibility=hidden \
--fstack-protector -fomit-frame-pointer -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables
+LOCAL_CPPFLAGS += -g0 -O2 -Wall -Wextra -std=c++17 -DNDEBUG \
+-fdata-sections -ffunction-sections -fvisibility=hidden -fstack-protector -fomit-frame-pointer
 ifeq ($(TARGET_ARCH_ABI), armeabi-v7a)
     LOCAL_SRC_FILES := substrate/Hooker.cpp substrate/Debug.cpp substrate/PosixMemory.cpp # Cydia Substrate
     LOCAL_CPPFLAGS += -mfloat-abi=softfp -mthumb
@@ -31,20 +29,15 @@ LOCAL_CPP_EXTENSION := .cpp .cc
 LOCAL_SHARED_LIBRARIES := substrate gloss #dobby
 LOCAL_MODULE    := armpatch
 LOCAL_SRC_FILES := ARMPatch.cpp
-LOCAL_CFLAGS += -g0 -O2 -Wall -Wextra -Werror \
--std=c17 -DNDEBUG -fpic \
--fstack-protector -fdata-sections -ffunction-sections -fvisibility=hidden \
--fomit-frame-pointer -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables
-LOCAL_CPPFLAGS += -g0 -O2 -Wall -Wextra -Werror \
--std=c++17 -DNDEBUG -fpic \
--fstack-protector -fdata-sections -ffunction-sections -fvisibility=hidden \
--fomit-frame-pointer -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables
+LOCAL_CFLAGS += -g0 -O2 -Wall -Wextra -Werror -std=c17 -DNDEBUG \
+-fstack-protector -fdata-sections -ffunction-sections -fvisibility=hidden -fomit-frame-pointer
+LOCAL_CPPFLAGS += -g0 -O2 -Wall -Wextra -Werror -std=c++17 -DNDEBUG \
+-fstack-protector -fdata-sections -ffunction-sections -fvisibility=hidden -fomit-frame-pointer
 ifeq ($(TARGET_ARCH_ABI), armeabi-v7a)
     LOCAL_CFLAGS += -mfloat-abi=softfp -mthumb
     LOCAL_CPPFLAGS += -mfloat-abi=softfp -mthumb
 endif
 LOCAL_LDLIBS += -landroid -llog -ldl
-LOCAL_LDFLAGS += -Wl,--gc-sections -Wl,--exclude-libs,ALL -Wl,--strip-debug -Wl,--strip-unneeded
 
  ## xDL ##
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/xDL/xdl/src/main/cpp $(LOCAL_PATH)/xDL/xdl/src/main/cpp/include
