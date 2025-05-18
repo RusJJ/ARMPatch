@@ -9,6 +9,7 @@ ifeq ($(TARGET_ARCH_ABI), armeabi-v7a)
     LOCAL_CPPFLAGS += -mfloat-abi=softfp -mthumb
 else ifeq ($(TARGET_ARCH_ABI), arm64-v8a)
     LOCAL_SRC_FILES := And64InlineHook/And64InlineHook.cpp # And64InlineHook
+    LOCAL_LDFLAGS += -Wl,-z,max-page-size=16384
 else
     $(error Unknown arch, only support armeabi-v7a and arm64-v8a)
 endif
@@ -33,9 +34,13 @@ LOCAL_CFLAGS += -g0 -O2 -Wall -Wextra -Werror -std=c17 -DNDEBUG \
 -fstack-protector -fdata-sections -ffunction-sections -fvisibility=hidden -fomit-frame-pointer
 LOCAL_CPPFLAGS += -g0 -O2 -Wall -Wextra -Werror -std=c++17 -DNDEBUG \
 -fstack-protector -fdata-sections -ffunction-sections -fvisibility=hidden -fomit-frame-pointer
-ifeq ($(TARGET_ARCH_ABI), armeabi-v7a)
+ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
+    LOCAL_LDFLAGS += -Wl,-z,max-page-size=16384
+else ifeq ($(TARGET_ARCH_ABI), armeabi-v7a)
     LOCAL_CFLAGS += -mfloat-abi=softfp -mthumb
     LOCAL_CPPFLAGS += -mfloat-abi=softfp -mthumb
+else
+    $(error Unknown arch, only support armeabi-v7a and arm64-v8a)
 endif
 LOCAL_LDLIBS += -landroid -llog -ldl
 
