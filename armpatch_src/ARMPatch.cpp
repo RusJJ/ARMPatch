@@ -1,25 +1,32 @@
 #include "ARMPatch.h"
 #include <ctype.h>
 #include <link.h>
+#include <string>
+#include <set>
+#include <map>
 
 #ifdef __XDL
-void* xdl_cached[100] {0}; // Much more enough
-int cache_c = 0;
+
+static std::map<std::string, void*> xdl_by_path;
+static std::set<void*> xdl_handles;
 
 inline bool xdl_is_cached(void* ptr)
 {
-    for(int i = 0; i < cache_c; ++i)
-        if(xdl_cached[i] == ptr) return true;
-    return false;
+    return (ptr && xdl_handles.count(ptr) != 0);
 }
-inline void* xdl_cache(void* ptr)
+inline void* xdl_cache_open(const char* name)
 {
-    if(!xdl_is_cached(ptr))
+    if(!name) return NULL;
+    
+    auto it = xdl_by_path.find(name);
+    if(it != xdl_by_path.end()) return it->second;
+    void* h = xdl_open(name, XDL_DEFAULT);
+    if(h)
     {
-        xdl_cached[cache_c] = ptr;
-        ++cache_c;
+        xdl_by_path.emplace(name, h);
+        xdl_handles.insert(h);
     }
-    return ptr;
+    return h;
 }
 #endif
 
@@ -75,7 +82,7 @@ namespace ARMPatch
     void* GetLibHandle(const char* soLib)
     {
         #ifdef __XDL
-            return xdl_cache(xdl_open(soLib, XDL_DEFAULT));
+            return xdl_cache_open(soLib);
         #else
             return dlopen(soLib, RTLD_LAZY);
         #endif
@@ -86,7 +93,7 @@ namespace ARMPatch
         __iter_dlName = NULL;
         #ifdef __XDL
             xdl_iterate_phdr(__iter_callback, (void*)addr, XDL_DEFAULT);
-            return xdl_cache(xdl_open(__iter_dlName, XDL_DEFAULT));
+            return xdl_cache_open(__iter_dlName);
         #else
             dl_iterate_phdr(__iter_callback, (void*)addr);
             return dlopen(__iter_dlName, RTLD_LAZY);
@@ -134,7 +141,7 @@ namespace ARMPatch
         __iter_dlName = NULL;
         #ifdef __XDL
             xdl_iterate_phdr(__iter_callback, (void*)libAddr, XDL_DEFAULT);
-            void* handle = xdl_cache(xdl_open(__iter_dlName, XDL_DEFAULT));
+            void* handle = xdl_cache_open(__iter_dlName);
             return (uintptr_t)xdl_sym(handle, sym, NULL);
         #else
             dl_iterate_phdr(__iter_callback, (void*)libAddr);
@@ -164,7 +171,7 @@ namespace ARMPatch
     void Read(uintptr_t src, uintptr_t dest, size_t size)
     {
         Unprotect(src, size); // Do we need it..?
-        memcpy((void*)src, (void*)dest, size);
+        memcpy((void*)dest, (void*)src, size);
     }
 
     int WriteNOP(uintptr_t addr, size_t count)
@@ -538,8 +545,7 @@ namespace ARMPatch
         auto patternstart = ret.vBytes.data();
         auto length = ret.vBytes.size();
 
-        uintptr_t scanSize = libStart + scanLen;
-        for (size_t i = 0; i < scanSize; i++)
+        for (size_t i = 0; i < scanLen; i++)
         {
             uintptr_t addr = libStart + i;
             if (CompareData((const uint8_t*)addr, patternstart, length)) return addr;
