@@ -306,7 +306,7 @@ namespace ARMPatch
         else
         {
             // Probably not working!
-            uint32_t newDest = 0xEA000000 | ((dest - addr - 4) >> 2) & 0x00FFFFFF;
+            uint32_t newDest = 0xEA000000 | (((dest - addr - 4) >> 2) & 0x00FFFFFF);
             Write(addr, (uintptr_t)&newDest, sizeof(uint32_t));
             return 4;
         }
@@ -471,7 +471,7 @@ namespace ARMPatch
 
     static bool CompareData(const uint8_t* data, const bytePattern::byteEntry* pattern, size_t patternlength)
     {
-        int index = 0;
+        size_t index = 0;
         for (size_t i = 0; i < patternlength; i++)
         {
             auto byte = *pattern;
@@ -545,7 +545,8 @@ namespace ARMPatch
         auto patternstart = ret.vBytes.data();
         auto length = ret.vBytes.size();
 
-        for (size_t i = 0; i < scanLen; i++)
+        if(length == 0 || scanLen < length) return (uintptr_t)0;
+        for (size_t i = 0; i <= scanLen - length; i++)
         {
             uintptr_t addr = libStart + i;
             if (CompareData((const uint8_t*)addr, patternstart, length)) return addr;
@@ -600,11 +601,14 @@ namespace ARMPatch
     const char* GetSymNameXDL(void* ptr)
     {
       #ifdef __XDL
+        static thread_local char symName[512];
         xdl_info_t info;
         void* cache = NULL;
         if(!xdl_addr(ptr, &info, &cache)) return NULL;
+        if(info.dli_sname) snprintf(symName, sizeof(symName), "%s", info.dli_sname);
+        else symName[0] = 0;
         xdl_addr_clean(&cache);
-        return info.dli_sname;
+        return symName[0] ? symName : NULL;
       #endif
         return NULL;
     }
