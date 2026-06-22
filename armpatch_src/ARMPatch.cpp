@@ -407,11 +407,11 @@ namespace ARMPatch
         if((from >= ARM_REG_X0 && to < ARM_REG_X0) || (to >= ARM_REG_X0 && from < ARM_REG_X0)) return; //__builtin_trap();
         else if(from >= ARM_REG_X0)
         {
-            Write(addr, ARMv8::MOVRegBits::CreateMOV(from - ARM_REG_X0, to - ARM_REG_X0, true));
+            Write(addr, ARMv8::MOVRegBits::Create(to - ARM_REG_X0, from - ARM_REG_X0, true));
         }
         else
         {
-            Write(addr, ARMv8::MOVRegBits::CreateMOV(from, to, false));
+            Write(addr, ARMv8::MOVRegBits::Create(to, from, false));
         }
     #endif
     }
